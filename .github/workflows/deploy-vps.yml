@@ -1,0 +1,85 @@
+name: Deploy to VPS
+
+on:
+  workflow_call:
+    inputs:
+      deployment_environment:
+        description: GitHub environment and deployment target
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.deployment_environment }}
+    concurrency:
+      group: deploy-${{ inputs.deployment_environment }}
+      cancel-in-progress: false
+    steps:
+      - name: Deploy verified commit over SSH
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          RELEASE_SHA: ${{ github.sha }}
+          DEPLOY_ENVIRONMENT: ${{ inputs.deployment_environment }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$DEPLOY_HOST" || -z "$DEPLOY_USER" || -z "$DEPLOY_PATH" \
+            || -z "$DEPLOY_KNOWN_HOSTS" || -z "$SSH_PRIVATE_KEY" ]]; then
+            echo "A required GitHub environment variable or secret is missing." >&2
+            exit 1
+          fi
+          if [[ ! "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid release commit SHA." >&2
+            exit 1
+          fi
+          if [[ "$DEPLOY_PATH" != /* ]]; then
+            echo "DEPLOY_PATH must be an absolute path on the VPS." >&2
+            exit 1
+          fi
+
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" >"$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          trap 'rm -f "$HOME/.ssh/deploy_key"' EXIT
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" >"$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+          printf -v remote_command 'bash -s -- %q %q %q' \
+            "$RELEASE_SHA" "$DEPLOY_PATH" "$DEPLOY_ENVIRONMENT"
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ConnectTimeout=15 \
+            "$DEPLOY_USER@$DEPLOY_HOST" "$remote_command" <<'REMOTE'
+          set -euo pipefail
+          release_sha="$1"
+          deploy_path="$2"
+          environment="$3"
+
+          if [[ "$environment" != staging && "$environment" != production ]]; then
+            echo "Invalid deployment environment." >&2
+            exit 2
+          fi
+          git -C "$deploy_path" fetch --no-tags origin main
+          main_sha="$(git -C "$deploy_path" rev-parse FETCH_HEAD)"
+          if [[ "$main_sha" != "$release_sha" ]]; then
+            echo "Refusing to deploy stale commit $release_sha; main is now $main_sha." >&2
+            exit 1
+          fi
+          git -C "$deploy_path" checkout --detach "$release_sha"
+          cd "$deploy_path"
+          ./deploy/scripts/deploy.sh "$environment"
+          REMOTE

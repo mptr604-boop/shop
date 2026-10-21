@@ -91,6 +91,39 @@ W razie problemu `./deploy/scripts/rollback.sh staging` (lub `production`)
 przywraca poprzednią wersję aplikacji. Rollback nie cofa schematu ani danych
 bazy; migracje wdrożeniowe muszą pozostać kompatybilne ze starą wersją aplikacji.
 
+### CI/CD przez GitHub Actions
+
+Workflow CI uruchamia testy, kontrolę typów i build przy pushu oraz pull requeście.
+Po przejściu CI push na `main` może automatycznie wdrożyć staging; produkcję
+uruchamia się ręcznie przez **Actions → CI → Run workflow**, wybierając
+`production`. W obu przypadkach wdrażany jest dokładny commit, który przeszedł
+job `verify`. Wdrożenie przez SSH uruchamia na VPS-ie istniejące
+`deploy/scripts/deploy.sh`, więc nadal wykonuje backup, migracje i health checki.
+Jeśli `main` zmieni się zanim wdrożenie dotrze do VPS-a, stary run zostanie
+odrzucony zamiast cofnąć nowszy release.
+
+Przed włączeniem automatyzacji:
+
+1. Przygotuj osobny, czysty checkout repozytorium na VPS-ie dla każdego
+   środowiska. Skonfiguruj dla użytkownika wdrożeniowego klucz SSH o dostępie
+   tylko do odczytu repozytorium oraz dostęp do Docker Compose.
+2. W ustawieniach repozytorium utwórz środowiska GitHub `staging` i
+   `production`. Dla każdego dodaj zmienne środowiskowe `DEPLOY_HOST`,
+   `DEPLOY_USER`, `DEPLOY_PATH` (bezwzględna ścieżka checkoutu) oraz
+   `DEPLOY_KNOWN_HOSTS` (zaufany wpis klucza hosta SSH, nie wynik pobrany
+   bez weryfikacji w workflow).
+3. Dodaj sekret środowiskowy `DEPLOY_SSH_PRIVATE_KEY` — klucz prywatny
+   uwierzytelniający runnera do VPS-a. Nie używaj klucza deploy key GitHuba,
+   którym VPS pobiera kod.
+4. Dla `production` włącz wymaganych reviewerów i ochronę środowiska. Dla
+   stagingu dodaj zmienną repozytorium `STAGING_DEPLOY_ENABLED=true`, aby
+   włączyć auto-deploy po pushu na `main`. Bez niej staging nie wdraża się
+   automatycznie; nadal można uruchomić ręcznie workflow z `main`.
+
+Nie przechowuj kluczy prywatnych ani plików `.env` w repozytorium. Użytkownik
+wdrożeniowy może sterować Dockerem, co daje mu szerokie uprawnienia na VPS-ie;
+zabezpiecz konto, klucze i dostęp sieciowy tak jak dostęp administracyjny.
+
 #### Odtwarzanie backupu bazy
 
 Odtwarzanie zastępuje bieżącą bazę i wymaga wpisania dokładnego potwierdzenia.
