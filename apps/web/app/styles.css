@@ -557,6 +557,10 @@ h1 {
   color: #647169;
 }
 
+.order-status-expired {
+  color: #647169;
+}
+
 .cancel-order-form {
   margin: 1rem 0;
 }

@@ -1,5 +1,6 @@
 import {
   check,
+  index,
   integer,
   pgTable,
   primaryKey,
@@ -90,12 +91,16 @@ export const orders = pgTable(
     city: varchar("city", { length: 100 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull(),
     totalInCents: integer("total_in_cents").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => [
     check("orders_total_in_cents_non_negative", sql`${table.totalInCents} >= 0`),
+    index("orders_pending_expiry_idx")
+      .on(table.expiresAt)
+      .where(sql`${table.status} = 'pending_payment'`),
   ],
 );
 

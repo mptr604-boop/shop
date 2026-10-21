@@ -12,7 +12,7 @@ export const orderIdSchema = z.string().uuid();
 
 export const orderSchema = z.object({
   id: z.string().uuid(),
-  status: z.enum(["pending_payment", "cancelled"]),
+  status: z.enum(["pending_payment", "cancelled", "expired"]),
   customerName: z.string(),
   email: z.string().email(),
   street: z.string(),
@@ -21,6 +21,7 @@ export const orderSchema = z.object({
   currency: z.string().length(3),
   totalInCents: z.number().int().nonnegative(),
   createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
   items: z.array(
     z.object({
       productName: z.string().min(1),

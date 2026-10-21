@@ -4,6 +4,7 @@ import { after, before, describe, it } from "node:test";
 import type { CreateOrderInput } from "@shop/contracts";
 import { app } from "../../app.js";
 import { closeDatabase, pool } from "../../db/client.js";
+import { expirePendingOrders } from "./orders.repository.js";
 
 const customer: CreateOrderInput = {
   customerName: "Testowy Klient",
@@ -327,6 +328,7 @@ describe("orders API", () => {
 
     const order = await response.json();
     assert.equal(order.status, "pending_payment");
+    assert.ok(Date.parse(order.expiresAt) > Date.now());
     assert.equal(order.items.length, 1);
     assert.equal(order.items[0].quantity, 2);
     assert.equal(order.items[0].unitPriceInCents, product.priceInCents);
@@ -461,6 +463,81 @@ describe("orders API", () => {
       stockAfterRepeatedCancellation.rows[0].stock_quantity,
       product.stockQuantity,
     );
+  });
+
+  it("expires unpaid orders and restores stock exactly once", async (context) => {
+    const cookie = await createTestCart();
+    const product = await addSeedProduct(cookie);
+    context.after(async () => {
+      await deleteTestCart(cookie);
+      await restoreProductStock(product.id, product.stockQuantity);
+    });
+
+    const createResponse = await fetch(`${baseUrl}/orders`, {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify(customer),
+    });
+    assert.equal(createResponse.status, 201);
+    const order = await createResponse.json();
+    await pool.query(
+      "UPDATE orders SET expires_at = now() - interval '1 second' WHERE id = $1",
+      [order.id],
+    );
+
+    const expiryRuns = await Promise.all([
+      expirePendingOrders(),
+      expirePendingOrders(),
+    ]);
+    assert.equal(expiryRuns.reduce((total, count) => total + count, 0), 1);
+
+    const orderResponse = await fetch(`${baseUrl}/orders/${order.id}`, {
+      headers: { Cookie: cookie },
+    });
+    assert.equal(orderResponse.status, 200);
+    assert.equal((await orderResponse.json()).status, "expired");
+
+    const stock = await pool.query<{ stock_quantity: number }>(
+      "SELECT stock_quantity FROM products WHERE id = $1",
+      [product.id],
+    );
+    assert.equal(stock.rows[0].stock_quantity, product.stockQuantity);
+    assert.equal(await expirePendingOrders(), 0);
+  });
+
+  it("marks a late cancellation as expired and restores stock", async (context) => {
+    const cookie = await createTestCart();
+    const product = await addSeedProduct(cookie);
+    context.after(async () => {
+      await deleteTestCart(cookie);
+      await restoreProductStock(product.id, product.stockQuantity);
+    });
+
+    const createResponse = await fetch(`${baseUrl}/orders`, {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify(customer),
+    });
+    assert.equal(createResponse.status, 201);
+    const order = await createResponse.json();
+    await pool.query(
+      "UPDATE orders SET expires_at = now() - interval '1 second' WHERE id = $1",
+      [order.id],
+    );
+
+    const cancelResponse = await fetch(
+      `${baseUrl}/orders/${order.id}/cancel`,
+      { method: "POST", headers: { Cookie: cookie } },
+    );
+    assert.equal(cancelResponse.status, 200);
+    assert.equal((await cancelResponse.json()).status, "expired");
+
+    const stock = await pool.query<{ stock_quantity: number }>(
+      "SELECT stock_quantity FROM products WHERE id = $1",
+      [product.id],
+    );
+    assert.equal(stock.rows[0].stock_quantity, product.stockQuantity);
+    assert.equal(await expirePendingOrders(), 0);
   });
 
   it("prevents two carts from ordering the same remaining stock", async (context) => {

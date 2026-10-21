@@ -1,14 +1,17 @@
 import { app } from "./app.js";
 import { closeDatabase } from "./db/client.js";
+import { startOrderExpiryWorker } from "./modules/orders/order-expiry.worker.js";
 
 const port = Number(process.env.PORT ?? 4000);
+const stopOrderExpiryWorker = startOrderExpiryWorker();
 
 const server = app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
 });
 
-function shutdown(signal: string) {
+async function shutdown(signal: string) {
   console.log(`${signal} received; closing API server`);
+  await stopOrderExpiryWorker();
   server.close((error) => {
     if (error) {
       console.error("Failed to close API server cleanly", error);
@@ -22,5 +25,5 @@ function shutdown(signal: string) {
   });
 }
 
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
+process.on("SIGTERM", () => void shutdown("SIGTERM"));

@@ -40,7 +40,10 @@ stanu dwa razy. Checkout tworzy zamówienie z danymi dostawy i kopią pozycji
 koszyka; płatności nie są jeszcze obsługiwane.
 Klient może anulować nieopłacone zamówienie przez
 `POST /orders/{id}/cancel`; stan magazynowy wraca wtedy do poprzedniej
-wartości. API udostępnia też `POST /orders` i `GET /orders/{id}`.
+wartości. Nieopłacone zamówienie wygasa po 30 minutach. API sprawdza je co
+30 sekund, ustawia status `expired` i atomowo zwraca produkty do magazynu.
+Uruchomienie kilku instancji API nie powoduje podwójnego zwrotu zapasu.
+API udostępnia też `POST /orders` i `GET /orders/{id}`.
 
 Panel administratora jest dostępny pod `/admin`. W `.env` ustaw `ADMIN_EMAIL`,
 wygeneruj hash hasła przez `npm run admin:hash-password` i ustaw

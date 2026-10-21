@@ -155,7 +155,9 @@ export default function AdminPage() {
                   <span className={`order-status order-status-${order.status}`}>
                     {order.status === "cancelled"
                       ? "Anulowane"
-                      : "Oczekuje na płatność"}
+                      : order.status === "expired"
+                        ? "Wygasło"
+                        : "Oczekuje na płatność"}
                   </span>
                   <strong>
                     {formatPrice(order.totalInCents, order.currency)}

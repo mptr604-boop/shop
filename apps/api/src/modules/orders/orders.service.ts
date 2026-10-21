@@ -43,6 +43,7 @@ export async function createOrder(
   return orderSchema.parse({
     ...result.order,
     createdAt: result.order.createdAt.toISOString(),
+    expiresAt: result.order.expiresAt.toISOString(),
     items: result.items,
   });
 }

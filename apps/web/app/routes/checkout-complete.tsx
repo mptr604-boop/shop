@@ -62,14 +62,18 @@ export default function CheckoutCompletePage() {
         <p className="eyebrow">
           {order.status === "pending_payment"
             ? "Zamówienie utworzone"
-            : "Zamówienie anulowane"}
+            : order.status === "expired"
+              ? "Zamówienie wygasło"
+              : "Zamówienie anulowane"}
         </p>
         <h1>Dziękujemy, {order.customerName}!</h1>
         <p className="intro">
           Zamówienie <strong>{order.id}</strong>{" "}
           {order.status === "pending_payment"
-            ? "oczekuje na płatność. W tej wersji sklepu płatności nie są obsługiwane."
-            : "zostało anulowane, a produkty wróciły do magazynu."}
+            ? `oczekuje na płatność do ${new Date(order.expiresAt).toLocaleString("pl-PL")}. W tej wersji sklepu płatności nie są obsługiwane.`
+            : order.status === "expired"
+              ? "wygasło z powodu braku płatności. Produkty wróciły do magazynu."
+              : "zostało anulowane, a produkty wróciły do magazynu."}
         </p>
       </header>
 
