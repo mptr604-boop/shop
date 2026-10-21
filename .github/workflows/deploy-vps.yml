@@ -7,6 +7,11 @@ on:
         description: GitHub environment and deployment target
         type: string
         required: true
+      operation:
+        description: Operation to run on the VPS
+        type: string
+        required: false
+        default: deploy
 
 permissions:
   contents: read
@@ -21,7 +26,7 @@ jobs:
       group: deploy-${{ inputs.deployment_environment }}
       cancel-in-progress: false
     steps:
-      - name: Deploy verified commit over SSH
+      - name: Run VPS operation over SSH
         timeout-minutes: 20
         shell: bash
         env:
@@ -32,6 +37,7 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
           RELEASE_SHA: ${{ github.sha }}
           DEPLOY_ENVIRONMENT: ${{ inputs.deployment_environment }}
+          DEPLOY_OPERATION: ${{ inputs.operation }}
           SHOP_URL: ${{ vars.SHOP_URL }}
           API_URL: ${{ vars.API_URL }}
         run: |
@@ -48,7 +54,11 @@ jobs:
             echo "SHOP_URL and API_URL must be HTTPS origins without credentials or paths." >&2
             exit 1
           fi
-          if [[ ! "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+          if [[ "$DEPLOY_OPERATION" != deploy && "$DEPLOY_OPERATION" != rollback ]]; then
+            echo "Invalid deployment operation." >&2
+            exit 1
+          fi
+          if [[ "$DEPLOY_OPERATION" == deploy && ! "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
             echo "Invalid release commit SHA." >&2
             exit 1
           fi
@@ -64,8 +74,8 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" >"$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
 
-          printf -v remote_command 'bash -s -- %q %q %q' \
-            "$RELEASE_SHA" "$DEPLOY_PATH" "$DEPLOY_ENVIRONMENT"
+          printf -v remote_command 'bash -s -- %q %q %q %q' \
+            "$RELEASE_SHA" "$DEPLOY_PATH" "$DEPLOY_ENVIRONMENT" "$DEPLOY_OPERATION"
           ssh \
             -i "$HOME/.ssh/deploy_key" \
             -o BatchMode=yes \
@@ -78,20 +88,29 @@ jobs:
           release_sha="$1"
           deploy_path="$2"
           environment="$3"
+          operation="$4"
 
           if [[ "$environment" != staging && "$environment" != production ]]; then
             echo "Invalid deployment environment." >&2
             exit 2
           fi
-          git -C "$deploy_path" fetch --no-tags origin main
-          main_sha="$(git -C "$deploy_path" rev-parse FETCH_HEAD)"
-          if [[ "$main_sha" != "$release_sha" ]]; then
-            echo "Refusing to deploy stale commit $release_sha; main is now $main_sha." >&2
+          if [[ "$operation" != deploy && "$operation" != rollback ]]; then
+            echo "Invalid VPS operation." >&2
             exit 1
           fi
-          git -C "$deploy_path" checkout --detach "$release_sha"
           cd "$deploy_path"
-          ./deploy/scripts/deploy.sh "$environment"
+          if [[ "$operation" == deploy ]]; then
+            git fetch --no-tags origin main
+            main_sha="$(git rev-parse FETCH_HEAD)"
+            if [[ "$main_sha" != "$release_sha" ]]; then
+              echo "Refusing to deploy stale commit $release_sha; main is now $main_sha." >&2
+              exit 1
+            fi
+            git checkout --detach "$release_sha"
+            ./deploy/scripts/deploy.sh "$environment"
+          else
+            ./deploy/scripts/rollback.sh "$environment"
+          fi
           REMOTE
 
       - name: Verify public HTTPS endpoints

@@ -1,0 +1,25 @@
+name: Roll back deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_environment:
+        description: Environment to roll back
+        type: choice
+        options:
+          - staging
+          - production
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy-vps.yml
+    with:
+      deployment_environment: ${{ inputs.deployment_environment }}
+      operation: rollback

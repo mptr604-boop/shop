@@ -94,13 +94,17 @@ bazy; migracje wdrożeniowe muszą pozostać kompatybilne ze starą wersją apli
 ### CI/CD przez GitHub Actions
 
 Workflow CI uruchamia testy, kontrolę typów i build przy pushu oraz pull requeście.
-Po przejściu CI push na `main` może automatycznie wdrożyć staging; produkcję
-uruchamia się ręcznie przez **Actions → CI → Run workflow**, wybierając
-`production`. W obu przypadkach wdrażany jest dokładny commit, który przeszedł
-job `verify`. Wdrożenie przez SSH uruchamia na VPS-ie istniejące
-`deploy/scripts/deploy.sh`, więc nadal wykonuje backup, migracje i health checki.
-Jeśli `main` zmieni się zanim wdrożenie dotrze do VPS-a, stary run zostanie
-odrzucony zamiast cofnąć nowszy release.
+Push na `main` może automatycznie wdrożyć staging po włączeniu tej opcji. Ręczny
+wybór `production` w **Actions → CI → Run workflow** najpierw wdraża i publicznie
+sprawdza ten sam commit na stagingu, a dopiero potem czeka na zatwierdzenie
+środowiska `production`. Po akceptacji wdraża dokładnie ten commit. Wdrożenie
+przez SSH uruchamia na VPS-ie istniejące `deploy/scripts/deploy.sh`, więc nadal
+wykonuje backup, migracje i wewnętrzne health checki. Jeśli `main` zmieni się
+przed wdrożeniem, stary run zostanie odrzucony zamiast wdrażać starszy commit.
+Odrębne **Actions → Roll back deployment → Run workflow** przywraca poprzednią
+wersję aplikacji przez `rollback.sh` i ponownie sprawdza publiczny HTTPS; produkcyjny
+rollback również wymaga zgody środowiska `production`. Rollback aplikacji nie
+cofa zmian ani danych bazy.
 Dependabot co tydzień proponuje grupowane aktualizacje zależności npm i GitHub
 Actions jako osobne pull requesty; każdy z nich przechodzi przez ten sam CI.
 
@@ -123,7 +127,8 @@ Przed włączeniem automatyzacji:
 4. Dla `production` włącz wymaganych reviewerów i ochronę środowiska. Dla
    stagingu dodaj zmienną repozytorium `STAGING_DEPLOY_ENABLED=true`, aby
    włączyć auto-deploy po pushu na `main`. Bez niej staging nie wdraża się
-   automatycznie; nadal można uruchomić ręcznie workflow z `main`.
+   automatycznie; nadal można uruchomić ręcznie workflow z `main`. Wybór
+   produkcji i rollback produkcji czekają na zatwierdzenie tego środowiska.
 
 Nie przechowuj kluczy prywatnych ani plików `.env` w repozytorium. Użytkownik
 wdrożeniowy może sterować Dockerem, co daje mu szerokie uprawnienia na VPS-ie;
