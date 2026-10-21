@@ -29,6 +29,11 @@ Katalog produktów jest dostępny pod `GET /products`, a szczegóły pojedynczeg
 produktu pod `GET /products/{slug}`. Frontend renderuje listę i strony
 szczegółów po stronie serwera.
 
+Koszyk gościa jest dostępny przez `GET /cart`, `POST /cart/items`,
+`PATCH /cart/items/{slug}` i `DELETE /cart/items/{slug}`. API identyfikuje
+koszyk przez losowe cookie `HttpOnly`; w bazie zapisuje jego skrót, a nie
+wartość cookie. Sesja wygasa po 30 dniach bez aktywności.
+
 Przydatne polecenia:
 
 ```bash

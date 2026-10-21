@@ -1,10 +1,14 @@
 import express from "express";
+import cookieParser from "cookie-parser";
 import swaggerUi from "swagger-ui-express";
 import {
+  apiErrorSchema,
   healthResponseSchema,
   readinessResponseSchema,
 } from "@shop/contracts";
 import { pool } from "./db/client.js";
+import { cartRouter } from "./modules/cart/cart.routes.js";
+import { CartServiceError } from "./modules/cart/cart.service.js";
 import { catalogRouter } from "./modules/catalog/catalog.routes.js";
 import { openApiDocument } from "./openapi.js";
 
@@ -12,12 +16,14 @@ export const app = express();
 
 app.disable("x-powered-by");
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/openapi.json", (_request, response) => {
   response.json(openApiDocument);
 });
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
+app.use("/cart", cartRouter);
 app.use("/products", catalogRouter);
 
 app.get("/health", (_request, response) => {
@@ -50,3 +56,41 @@ app.get("/ready", async (_request, response) => {
     );
   }
 });
+
+app.use(
+  (
+    error: unknown,
+    _request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    if (response.headersSent) {
+      next(error);
+      return;
+    }
+
+    if (error instanceof CartServiceError) {
+      response
+        .status(error.statusCode)
+        .json(apiErrorSchema.parse({ message: error.message }));
+      return;
+    }
+
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "type" in error &&
+      error.type === "entity.parse.failed"
+    ) {
+      response
+        .status(400)
+        .json(apiErrorSchema.parse({ message: "Nieprawidłowy format JSON." }));
+      return;
+    }
+
+    console.error("Unhandled API error", error);
+    response
+      .status(500)
+      .json(apiErrorSchema.parse({ message: "Wystąpił nieoczekiwany błąd." }));
+  },
+);

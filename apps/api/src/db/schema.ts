@@ -2,6 +2,7 @@ import {
   check,
   integer,
   pgTable,
+  primaryKey,
   timestamp,
   uuid,
   varchar,
@@ -25,6 +26,38 @@ export const products = pgTable(
     check(
       "products_price_in_cents_non_negative",
       sql`${table.priceInCents} >= 0`,
+    ),
+  ],
+);
+
+export const carts = pgTable("carts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const cartItems = pgTable(
+  "cart_items",
+  {
+    cartId: uuid("cart_id")
+      .notNull()
+      .references(() => carts.id, { onDelete: "cascade" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    quantity: integer("quantity").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.cartId, table.productId] }),
+    check(
+      "cart_items_quantity_range",
+      sql`${table.quantity} >= 1 AND ${table.quantity} <= 99`,
     ),
   ],
 );
