@@ -33,6 +33,7 @@ npm run dev:web
 npm run dev:api
 npm run db:generate
 npm run db:migrate
+npm run db:seed
 npm run typecheck
 npm run build
 ```
@@ -58,3 +59,8 @@ Schemat bazy znajduje się w `apps/api/src/db/schema.ts`. Polecenie
 `npm run db:generate` generuje migrację Drizzle, a `npm run db:migrate`
 stosuje oczekujące migracje. Migracje nie uruchamiają się automatycznie przy
 starcie API.
+
+`npm run db:seed` dodaje przykładowe produkty. Operacja jest bezpieczna do
+ponownego uruchomienia — istniejące produkty o tych samych slugach pozostają
+bez zmian. Lista produktów jest dostępna pod `GET /products` i wyświetlana na
+stronie głównej przez loader renderowany po stronie serwera.

@@ -10,11 +10,12 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev": "npm run build --workspace @shop/contracts && concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "npm run build --workspace @shop/contracts && npm run dev --workspace @shop/api",
-    "dev:web": "npm run dev --workspace @shop/web",
+    "dev:web": "npm run build --workspace @shop/contracts && npm run dev --workspace @shop/web",
     "db:generate": "npm run db:generate --workspace @shop/api",
     "db:migrate": "npm run db:migrate --workspace @shop/api",
+    "db:seed": "npm run db:seed --workspace @shop/api",
     "build": "npm run build --workspace @shop/contracts && npm run build --workspace @shop/api && npm run build --workspace @shop/web",
     "typecheck": "npm run typecheck --workspace @shop/contracts && npm run build --workspace @shop/contracts && npm run typecheck --workspace @shop/api && npm run typecheck --workspace @shop/web"
   },

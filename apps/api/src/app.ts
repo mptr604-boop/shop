@@ -5,6 +5,7 @@ import {
   readinessResponseSchema,
 } from "@shop/contracts";
 import { pool } from "./db/client.js";
+import { catalogRouter } from "./modules/catalog/catalog.routes.js";
 import { openApiDocument } from "./openapi.js";
 
 export const app = express();
@@ -17,6 +18,7 @@ app.get("/openapi.json", (_request, response) => {
 });
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
+app.use("/products", catalogRouter);
 
 app.get("/health", (_request, response) => {
   const body = healthResponseSchema.parse({

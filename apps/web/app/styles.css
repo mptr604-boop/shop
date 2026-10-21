@@ -19,8 +19,12 @@ body {
 }
 
 .page {
-  width: min(100% - 2rem, 760px);
-  margin: 12vh auto;
+  width: min(100% - 2rem, 1100px);
+  margin: 8vh auto;
+}
+
+.page-header {
+  margin-bottom: 4rem;
 }
 
 .eyebrow {
@@ -45,10 +49,70 @@ h1 {
   line-height: 1.7;
 }
 
-.stack {
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.section-heading span,
+.product-details p {
+  color: #647169;
+}
+
+.product-grid {
   display: grid;
-  gap: 0.75rem;
-  margin-top: 2rem;
-  padding-left: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-card {
+  overflow: hidden;
+  border: 1px solid #e1e7e2;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.product-art {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  background: #e6eee8;
+  color: #327457;
+  font-size: 4rem;
+  font-weight: 700;
+}
+
+.product-details {
+  padding: 1.25rem;
+}
+
+.product-details h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.product-details p {
+  min-height: 3rem;
   line-height: 1.5;
+}
+
+.product-details strong {
+  font-size: 1.1rem;
+}
+
+.empty-state {
+  padding: 2rem;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #4b5952;
 }

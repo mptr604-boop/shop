@@ -1,5 +1,6 @@
 import {
   healthResponseSchema,
+  productListSchema,
   readinessResponseSchema,
 } from "@shop/contracts";
 import { zodToJsonSchema } from "zod-to-json-schema";
@@ -52,6 +53,25 @@ export const openApiDocument = {
             content: {
               "application/json": {
                 schema: zodToJsonSchema(readinessResponseSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/products": {
+      get: {
+        summary: "Pobiera listę produktów",
+        operationId: "getProducts",
+        responses: {
+          "200": {
+            description: "Lista produktów.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(productListSchema, {
                   target: "openApi3",
                   $refStrategy: "none",
                 }),
