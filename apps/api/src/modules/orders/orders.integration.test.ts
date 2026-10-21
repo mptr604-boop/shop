@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, scryptSync } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 import type { CreateOrderInput } from "@shop/contracts";
 import { app } from "../../app.js";
@@ -15,6 +15,13 @@ const customer: CreateOrderInput = {
 
 let server: ReturnType<typeof app.listen>;
 let baseUrl: string;
+const adminEnvKeys = [
+  "ADMIN_EMAIL",
+  "ADMIN_PASSWORD_HASH",
+] as const;
+const previousAdminEnv = new Map(
+  adminEnvKeys.map((key) => [key, process.env[key]]),
+);
 
 async function createTestCart() {
   const response = await fetch(`${baseUrl}/cart`);
@@ -76,6 +83,13 @@ async function restoreProductStock(productId: string, stockQuantity: number) {
 
 describe("orders API", () => {
   before(async () => {
+    const salt = Buffer.from("a".repeat(32), "hex");
+    process.env.ADMIN_EMAIL = "admin@example.com";
+    process.env.ADMIN_PASSWORD_HASH = `${salt.toString("hex")}$${scryptSync(
+      "correct horse battery staple",
+      salt,
+      64,
+    ).toString("hex")}`;
     server = app.listen(0);
     await new Promise<void>((resolve, reject) => {
       server.once("listening", resolve);
@@ -97,7 +111,126 @@ describe("orders API", () => {
       });
     } finally {
       await closeDatabase();
+      for (const key of adminEnvKeys) {
+        const value = previousAdminEnv.get(key);
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
     }
+  });
+
+  it("protects admin operations and allows inventory management", async () => {
+    const openApiResponse = await fetch(`${baseUrl}/openapi.json`);
+    assert.equal(openApiResponse.status, 200);
+    const openApi = (await openApiResponse.json()) as {
+      paths: Record<string, unknown>;
+    };
+    assert.deepEqual(
+      Object.keys(openApi.paths)
+        .filter((path) => path.startsWith("/admin"))
+        .sort(),
+      [
+        "/admin/dashboard",
+        "/admin/login",
+        "/admin/logout",
+        "/admin/products/{id}/stock",
+        "/admin/session",
+      ],
+    );
+    const loginDocumentation = openApi.paths["/admin/login"] as {
+      post: { responses: Record<string, unknown> };
+    };
+    const dashboardDocumentation = openApi.paths["/admin/dashboard"] as {
+      get: { responses: Record<string, unknown> };
+    };
+    assert.deepEqual(
+      Object.keys(loginDocumentation.post.responses).sort(),
+      ["200", "401", "503"],
+    );
+    assert.deepEqual(
+      Object.keys(dashboardDocumentation.get.responses).sort(),
+      ["200", "401"],
+    );
+
+    const unauthenticated = await fetch(`${baseUrl}/admin/dashboard`);
+    assert.equal(unauthenticated.status, 401);
+
+    const badLogin = await fetch(`${baseUrl}/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "admin@example.com",
+        password: "incorrect password",
+      }),
+    });
+    assert.equal(badLogin.status, 401);
+
+    const login = await fetch(`${baseUrl}/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "admin@example.com",
+        password: "correct horse battery staple",
+      }),
+    });
+    assert.equal(login.status, 200);
+    const setCookie = login.headers.get("set-cookie");
+    assert.ok(setCookie);
+    assert.match(setCookie, /HttpOnly/i);
+    assert.match(setCookie, /SameSite=Strict/i);
+    assert.match(setCookie, /Path=\//i);
+    const cookie = setCookie.split(";", 1)[0];
+
+    const dashboard = await fetch(`${baseUrl}/admin/dashboard`, {
+      headers: { Cookie: cookie },
+    });
+    assert.equal(dashboard.status, 200);
+    const body = await dashboard.json();
+    assert.ok(body.products.length > 0);
+    assert.ok(Array.isArray(body.orders));
+
+    const product = body.products[0] as {
+      id: string;
+      stockQuantity: number;
+    };
+    const invalidUpdate = await fetch(
+      `${baseUrl}/admin/products/${product.id}/stock`,
+      {
+        method: "PATCH",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify({ stockQuantity: -1 }),
+      },
+    );
+    assert.equal(invalidUpdate.status, 400);
+
+    const updatedStock = product.stockQuantity + 7;
+    try {
+      const update = await fetch(
+        `${baseUrl}/admin/products/${product.id}/stock`,
+        {
+          method: "PATCH",
+          headers: { Cookie: cookie, "Content-Type": "application/json" },
+          body: JSON.stringify({ stockQuantity: updatedStock }),
+        },
+      );
+      assert.equal(update.status, 200);
+      assert.equal((await update.json()).stockQuantity, updatedStock);
+    } finally {
+      await restoreProductStock(product.id, product.stockQuantity);
+    }
+
+    const logout = await fetch(`${baseUrl}/admin/logout`, {
+      method: "POST",
+      headers: { Cookie: cookie },
+    });
+    assert.equal(logout.status, 200);
+    const protectedAfterLogout = await fetch(`${baseUrl}/admin/dashboard`, {
+      headers: { Cookie: cookie },
+    });
+    assert.equal(protectedAfterLogout.status, 401);
   });
 
   it("adds, updates, and removes a cart item", async (context) => {

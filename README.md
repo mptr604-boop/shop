@@ -42,6 +42,14 @@ Klient może anulować nieopłacone zamówienie przez
 `POST /orders/{id}/cancel`; stan magazynowy wraca wtedy do poprzedniej
 wartości. API udostępnia też `POST /orders` i `GET /orders/{id}`.
 
+Panel administratora jest dostępny pod `/admin`. W `.env` ustaw `ADMIN_EMAIL`,
+wygeneruj hash hasła przez `npm run admin:hash-password` i ustaw
+`ADMIN_PASSWORD_HASH`. Panel używa losowego cookie sesji `HttpOnly`,
+`SameSite=Strict`, ważnego 8 godzin; w PostgreSQL przechowywany jest tylko
+skrót tokenu. Wylogowanie unieważnia sesję również po stronie serwera. Panel
+zarządza stanami produktów i pokazuje 50 ostatnich zamówień. Nie używaj
+przykładowych ani słabych haseł na środowisku produkcyjnym.
+
 Przydatne polecenia:
 
 ```bash

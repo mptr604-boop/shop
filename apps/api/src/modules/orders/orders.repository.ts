@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { CreateOrderInput } from "@shop/contracts";
 import { db } from "../../db/client.js";
 import { cartItems, carts, orderItems, orders, products } from "../../db/schema.js";
@@ -230,4 +230,34 @@ export async function cancelOrderRecord(orderId: string, cartId: string) {
   }
 
   return findOrderForCart(orderId, cartId);
+}
+
+export async function findAdminOrders() {
+  const rows = await db
+    .select()
+    .from(orders)
+    .orderBy(desc(orders.createdAt))
+    .limit(50);
+
+  return Promise.all(
+    rows.map(async (order) => {
+      const items = await db
+        .select({
+          productName: orderItems.productName,
+          unitPriceInCents: orderItems.unitPriceInCents,
+          quantity: orderItems.quantity,
+        })
+        .from(orderItems)
+        .where(eq(orderItems.orderId, order.id));
+
+      return {
+        ...order,
+        createdAt: order.createdAt.toISOString(),
+        items: items.map((item) => ({
+          ...item,
+          lineTotalInCents: item.unitPriceInCents * item.quantity,
+        })),
+      };
+    }),
+  );
 }

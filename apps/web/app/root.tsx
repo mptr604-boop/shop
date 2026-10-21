@@ -28,6 +28,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Link className="cart-nav-link" to="/cart">
             Koszyk
           </Link>
+          <Link className="cart-nav-link" to="/admin/login">
+            Admin
+          </Link>
         </nav>
         {children}
         <ScrollRestoration />

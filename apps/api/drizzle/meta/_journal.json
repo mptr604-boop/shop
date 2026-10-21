@@ -29,6 +29,13 @@
       "when": 1792600831394,
       "tag": "0003_mighty_nighthawk",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792601924597,
+      "tag": "0004_perpetual_ted_forrester",
+      "breakpoints": true
     }
   ]
 }

@@ -44,6 +44,14 @@ export const carts = pgTable("carts", {
     .defaultNow(),
 });
 
+export const adminSessions = pgTable("admin_sessions", {
+  tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const cartItems = pgTable(
   "cart_items",
   {

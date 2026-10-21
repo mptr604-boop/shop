@@ -1,4 +1,7 @@
 import {
+  adminDashboardSchema,
+  adminLoginSchema,
+  adminSessionSchema,
   addCartItemSchema,
   apiErrorSchema,
   cartSchema,
@@ -10,6 +13,7 @@ import {
   productSchema,
   readinessResponseSchema,
   updateCartItemSchema,
+  updateStockSchema,
 } from "@shop/contracts";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
@@ -28,9 +32,177 @@ export const openApiDocument = {
         name: "shop_cart",
         description: "Identyfikuje koszyk gościa; cookie ustawia API.",
       },
+      AdminCookie: {
+        type: "apiKey",
+        in: "cookie",
+        name: "shop_admin",
+        description: "Sesja administratora; cookie ustawia API po logowaniu.",
+      },
     },
   },
   paths: {
+    "/admin/login": {
+      post: {
+        summary: "Loguje administratora",
+        operationId: "loginAdmin",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: zodToJsonSchema(adminLoginSchema, {
+                target: "openApi3",
+                $refStrategy: "none",
+              }),
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Sesja administratora została utworzona.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(adminSessionSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+          "401": {
+            description: "Nieprawidłowe dane logowania.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(apiErrorSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+          "503": {
+            description: "Panel administratora nie jest skonfigurowany.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(apiErrorSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/admin/logout": {
+      post: {
+        summary: "Wylogowuje administratora i unieważnia sesję",
+        operationId: "logoutAdmin",
+        responses: {
+          "200": {
+            description: "Sesja została unieważniona.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(adminSessionSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/admin/session": {
+      get: {
+        summary: "Sprawdza sesję administratora",
+        operationId: "getAdminSession",
+        responses: {
+          "200": {
+            description: "Stan sesji administratora.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(adminSessionSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/admin/dashboard": {
+      get: {
+        summary: "Pobiera produkty i ostatnie zamówienia",
+        operationId: "getAdminDashboard",
+        security: [{ AdminCookie: [] }],
+        responses: {
+          "200": {
+            description: "Dane panelu administratora.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(adminDashboardSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+          "401": {
+            description: "Wymagane logowanie administratora.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(apiErrorSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/admin/products/{id}/stock": {
+      patch: {
+        summary: "Aktualizuje stan magazynowy produktu",
+        operationId: "updateAdminProductStock",
+        security: [{ AdminCookie: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: zodToJsonSchema(updateStockSchema, {
+                target: "openApi3",
+                $refStrategy: "none",
+              }),
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Zaktualizowany produkt.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(productSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+          "401": { description: "Wymagane logowanie administratora." },
+          "404": { description: "Nie znaleziono produktu." },
+        },
+      },
+    },
     "/health": {
       get: {
         summary: "Sprawdza dostępność API",

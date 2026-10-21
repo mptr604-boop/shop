@@ -9,6 +9,7 @@ import {
 import { pool } from "./db/client.js";
 import { cartRouter } from "./modules/cart/cart.routes.js";
 import { CartServiceError } from "./modules/cart/cart.service.js";
+import { adminRouter } from "./modules/admin/admin.routes.js";
 import { catalogRouter } from "./modules/catalog/catalog.routes.js";
 import { ordersRouter } from "./modules/orders/orders.routes.js";
 import { OrderServiceError } from "./modules/orders/orders.service.js";
@@ -26,6 +27,7 @@ app.get("/openapi.json", (_request, response) => {
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 app.use("/cart", cartRouter);
+app.use("/admin", adminRouter);
 app.use("/orders", ordersRouter);
 app.use("/products", catalogRouter);
 

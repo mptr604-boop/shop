@@ -22,5 +22,17 @@ export type {
   CreateOrderInput,
   Order,
 } from "./order.js";
+export {
+  adminDashboardSchema,
+  adminLoginSchema,
+  adminSessionSchema,
+  updateStockSchema,
+} from "./admin.js";
+export type {
+  AdminDashboard,
+  AdminLoginInput,
+  AdminSession,
+  UpdateStockInput,
+} from "./admin.js";
 export { productListSchema, productSchema } from "./product.js";
 export type { Product, ProductList } from "./product.js";

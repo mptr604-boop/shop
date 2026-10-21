@@ -456,6 +456,111 @@ h1 {
   margin-top: 0;
 }
 
+.admin-page {
+  display: grid;
+  gap: 2rem;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-header h1 {
+  margin-bottom: 0;
+}
+
+.admin-login-form {
+  max-width: 520px;
+}
+
+.admin-section {
+  padding: 1.5rem;
+  border: 1px solid #e1e7e2;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.admin-section > h2 {
+  margin-top: 0;
+}
+
+.admin-product-list,
+.admin-order-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-product,
+.admin-order {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid #e1e7e2;
+}
+
+.admin-product h3,
+.admin-order h3 {
+  margin: 0 0 0.3rem;
+  font-size: 1rem;
+}
+
+.admin-product p,
+.admin-order p {
+  margin: 0.25rem 0;
+  color: #647169;
+}
+
+.admin-stock-form {
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.admin-stock-form label {
+  display: grid;
+  gap: 0.3rem;
+  color: #526158;
+  font-size: 0.85rem;
+}
+
+.admin-stock-form input {
+  width: 7rem;
+  min-height: 42px;
+  padding: 0.5rem;
+  border: 1px solid #cbd6cd;
+  border-radius: 0.45rem;
+  font: inherit;
+}
+
+.admin-order-total {
+  display: grid;
+  justify-items: end;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.order-status {
+  color: #8a5a0a;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.order-status-cancelled {
+  color: #647169;
+}
+
+.cancel-order-form {
+  margin: 1rem 0;
+}
+
 .primary-link {
   margin-top: 0.5rem;
 }
@@ -467,6 +572,16 @@ h1 {
 
   .checkout-layout {
     grid-template-columns: 1fr;
+  }
+
+  .admin-product,
+  .admin-order {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .admin-order-total {
+    justify-items: start;
   }
 
   .cart-item {

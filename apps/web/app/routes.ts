@@ -6,5 +6,7 @@ export default [
   route("cart", "routes/cart.tsx"),
   route("checkout", "routes/checkout.tsx"),
   route("checkout/complete/:id", "routes/checkout-complete.tsx"),
+  route("admin", "routes/admin.tsx"),
+  route("admin/login", "routes/admin-login.tsx"),
   route("favicon.ico", "routes/favicon.ts"),
 ] satisfies RouteConfig;
