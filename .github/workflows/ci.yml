@@ -55,7 +55,7 @@ jobs:
           docker compose --project-name shop-staging \
             --env-file deploy/.env.staging.example \
             -f deploy/compose.yml config --quiet
-          node --test tests/deploy/monitor.test.mjs
+          node --test tests/deploy/*.test.mjs
 
       - name: Apply database migrations
         run: npm run db:migrate

@@ -88,6 +88,24 @@ W razie problemu `./deploy/scripts/rollback.sh staging` (lub `production`)
 przywraca poprzednią wersję aplikacji. Rollback nie cofa schematu ani danych
 bazy; migracje wdrożeniowe muszą pozostać kompatybilne ze starą wersją aplikacji.
 
+#### Odtwarzanie backupu bazy
+
+Odtwarzanie zastępuje bieżącą bazę i wymaga wpisania dokładnego potwierdzenia.
+Przed zmianą skrypt weryfikuje sumę SHA-256 i archiwum, tworzy świeży backup
+ochronny, odtwarza wybraną kopię do tymczasowej bazy i dopiero wtedy przełącza
+aplikację. Poprzednia baza zostaje na serwerze pod nazwą wypisaną przez skrypt;
+usuń ją dopiero po sprawdzeniu danych i działania sklepu. Operacja wymaga
+zatrzymania usług aplikacji na czas przełączenia.
+
+```bash
+ls -lh deploy/backups/production
+./deploy/scripts/restore.sh production 20261021T120000Z.dump
+```
+
+Uruchamiaj skrypt interaktywnie na VPS-ie. Kopie nadal znajdują się na tym samym
+serwerze, dlatego przed produkcyjnym użyciem skonfiguruj dodatkowy backup poza
+VPS-em.
+
 ### Monitorowanie i alerty
 
 Skrypt monitorujący sprawdza HTTPS strony głównej oraz `/ready` API. Alert
