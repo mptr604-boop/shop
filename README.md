@@ -90,6 +90,9 @@ przez 14 dni; skonfiguruj dodatkową kopię poza VPS-em przed użyciem produkcyj
 W razie problemu `./deploy/scripts/rollback.sh staging` (lub `production`)
 przywraca poprzednią wersję aplikacji. Rollback nie cofa schematu ani danych
 bazy; migracje wdrożeniowe muszą pozostać kompatybilne ze starą wersją aplikacji.
+Ten skrypt nadal zarządza rollbackiem usług Docker Compose na hoście, na którym
+uruchomiono produkcyjny stack; nie wymaga GitHub Actions. Nie usuwaj poprzednich
+tagów obrazów, bo rollback uruchamia zachowany obraz poprzedniego release'u.
 
 ### CI/CD i obrazy Docker w GitHub Actions
 
@@ -122,6 +125,10 @@ docker pull ghcr.io/mptr604-boop/shop:main-migrator
 Widoczność pakietu można ustawić w ustawieniach pakietu GitHub. Do prezentacji
 sklepu na laptopie nadal można uruchamiać projekt lokalnie (`npm run dev`); samo
 opublikowanie obrazu w GHCR nie wystawia aplikacji w internecie.
+Publikacja obrazów nie zastępuje rollbacku Dockera: skrypt
+`deploy/scripts/rollback.sh production` pozostaje dostępny dla hosta, na którym
+działa produkcyjny stack. Usunięta została tylko automatyzacja GitHub łącząca
+się z hostem przez SSH, bo wymagałaby VPS-a i sekretów dostępowych.
 
 Dependabot co tydzień proponuje grupowane aktualizacje zależności npm i GitHub
 Actions jako osobne pull requesty; każdy z nich przechodzi przez ten sam CI.
