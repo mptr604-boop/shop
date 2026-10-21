@@ -111,7 +111,10 @@ Przed włączeniem automatyzacji:
    `production`. Dla każdego dodaj zmienne środowiskowe `DEPLOY_HOST`,
    `DEPLOY_USER`, `DEPLOY_PATH` (bezwzględna ścieżka checkoutu) oraz
    `DEPLOY_KNOWN_HOSTS` (zaufany wpis klucza hosta SSH, nie wynik pobrany
-   bez weryfikacji w workflow).
+   bez weryfikacji w workflow), `SHOP_URL` (np.
+   `https://staging.example.com`) oraz `API_URL` (np.
+   `https://api.staging.example.com`). Po wdrożeniu runner sprawdza publiczny
+   HTTPS sklepu i `/ready` API.
 3. Dodaj sekret środowiskowy `DEPLOY_SSH_PRIVATE_KEY` — klucz prywatny
    uwierzytelniający runnera do VPS-a. Nie używaj klucza deploy key GitHuba,
    którym VPS pobiera kod.

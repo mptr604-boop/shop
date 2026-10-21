@@ -14,6 +14,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     environment:
       name: ${{ inputs.deployment_environment }}
     concurrency:
@@ -21,6 +22,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Deploy verified commit over SSH
+        timeout-minutes: 20
         shell: bash
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
@@ -30,12 +32,20 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
           RELEASE_SHA: ${{ github.sha }}
           DEPLOY_ENVIRONMENT: ${{ inputs.deployment_environment }}
+          SHOP_URL: ${{ vars.SHOP_URL }}
+          API_URL: ${{ vars.API_URL }}
         run: |
           set -euo pipefail
 
           if [[ -z "$DEPLOY_HOST" || -z "$DEPLOY_USER" || -z "$DEPLOY_PATH" \
-            || -z "$DEPLOY_KNOWN_HOSTS" || -z "$SSH_PRIVATE_KEY" ]]; then
+            || -z "$DEPLOY_KNOWN_HOSTS" || -z "$SSH_PRIVATE_KEY" \
+            || -z "$SHOP_URL" || -z "$API_URL" ]]; then
             echo "A required GitHub environment variable or secret is missing." >&2
+            exit 1
+          fi
+          if [[ ! "$SHOP_URL" =~ ^https://[^/?#@]+/?$ \
+            || ! "$API_URL" =~ ^https://[^/?#@]+/?$ ]]; then
+            echo "SHOP_URL and API_URL must be HTTPS origins without credentials or paths." >&2
             exit 1
           fi
           if [[ ! "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
@@ -83,3 +93,38 @@ jobs:
           cd "$deploy_path"
           ./deploy/scripts/deploy.sh "$environment"
           REMOTE
+
+      - name: Verify public HTTPS endpoints
+        timeout-minutes: 3
+        shell: bash
+        env:
+          SHOP_URL: ${{ vars.SHOP_URL }}
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          set -euo pipefail
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --max-redirs 3 \
+            --retry 5 \
+            --retry-connrefused \
+            --retry-delay 5 \
+            --max-time 15 \
+            --output /dev/null \
+            "${SHOP_URL%/}/"
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --max-redirs 3 \
+            --retry 5 \
+            --retry-connrefused \
+            --retry-delay 5 \
+            --max-time 15 \
+            --output /dev/null \
+            "${API_URL%/}/ready"
+          echo "Public storefront and API readiness checks passed."
