@@ -61,3 +61,54 @@ export const cartItems = pgTable(
     ),
   ],
 );
+
+export const orders = pgTable(
+  "orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    cartId: uuid("cart_id")
+      .notNull()
+      .references(() => carts.id, { onDelete: "restrict" }),
+    status: varchar("status", { length: 30 }).notNull().default("pending_payment"),
+    customerName: varchar("customer_name", { length: 120 }).notNull(),
+    email: varchar("email", { length: 255 }).notNull(),
+    street: varchar("street", { length: 200 }).notNull(),
+    postalCode: varchar("postal_code", { length: 20 }).notNull(),
+    city: varchar("city", { length: 100 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    totalInCents: integer("total_in_cents").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check("orders_total_in_cents_non_negative", sql`${table.totalInCents} >= 0`),
+  ],
+);
+
+export const orderItems = pgTable(
+  "order_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    productId: uuid("product_id").references(() => products.id, {
+      onDelete: "set null",
+    }),
+    productName: varchar("product_name", { length: 255 }).notNull(),
+    unitPriceInCents: integer("unit_price_in_cents").notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    quantity: integer("quantity").notNull(),
+  },
+  (table) => [
+    check(
+      "order_items_unit_price_non_negative",
+      sql`${table.unitPriceInCents} >= 0`,
+    ),
+    check(
+      "order_items_quantity_range",
+      sql`${table.quantity} >= 1 AND ${table.quantity} <= 99`,
+    ),
+  ],
+);

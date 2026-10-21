@@ -15,6 +15,13 @@
       "when": 1792583107698,
       "tag": "0001_friendly_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792599753031,
+      "tag": "0002_loud_gateway",
+      "breakpoints": true
     }
   ]
 }

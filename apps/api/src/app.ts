@@ -10,6 +10,8 @@ import { pool } from "./db/client.js";
 import { cartRouter } from "./modules/cart/cart.routes.js";
 import { CartServiceError } from "./modules/cart/cart.service.js";
 import { catalogRouter } from "./modules/catalog/catalog.routes.js";
+import { ordersRouter } from "./modules/orders/orders.routes.js";
+import { OrderServiceError } from "./modules/orders/orders.service.js";
 import { openApiDocument } from "./openapi.js";
 
 export const app = express();
@@ -24,6 +26,7 @@ app.get("/openapi.json", (_request, response) => {
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 app.use("/cart", cartRouter);
+app.use("/orders", ordersRouter);
 app.use("/products", catalogRouter);
 
 app.get("/health", (_request, response) => {
@@ -69,7 +72,7 @@ app.use(
       return;
     }
 
-    if (error instanceof CartServiceError) {
+    if (error instanceof CartServiceError || error instanceof OrderServiceError) {
       response
         .status(error.statusCode)
         .json(apiErrorSchema.parse({ message: error.message }));

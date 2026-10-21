@@ -168,10 +168,9 @@ export default function CartPage() {
               </p>
             ))}
             <p className="muted">Koszty dostawy obliczymy przy zamówieniu.</p>
-            <button className="checkout-button" disabled type="button">
+            <Link className="checkout-button" to="/checkout">
               Przejdź do kasy
-            </button>
-            <p className="muted">Składanie zamówień nie jest jeszcze dostępne.</p>
+            </Link>
           </aside>
         </div>
       )}

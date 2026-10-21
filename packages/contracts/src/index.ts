@@ -13,5 +13,14 @@ export type {
   CartItem,
   UpdateCartItemInput,
 } from "./cart.js";
+export {
+  createOrderSchema,
+  orderIdSchema,
+  orderSchema,
+} from "./order.js";
+export type {
+  CreateOrderInput,
+  Order,
+} from "./order.js";
 export { productListSchema, productSchema } from "./product.js";
 export type { Product, ProductList } from "./product.js";
