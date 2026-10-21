@@ -1,4 +1,5 @@
 import { app } from "./app.js";
+import { closeDatabase } from "./db/client.js";
 
 const port = Number(process.env.PORT ?? 4000);
 
@@ -13,6 +14,11 @@ function shutdown(signal: string) {
       console.error("Failed to close API server cleanly", error);
       process.exitCode = 1;
     }
+
+    void closeDatabase().catch((databaseError: unknown) => {
+      console.error("Failed to close database connection pool", databaseError);
+      process.exitCode = 1;
+    });
   });
 }
 

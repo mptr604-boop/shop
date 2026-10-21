@@ -1,4 +1,7 @@
-import { healthResponseSchema } from "@shop/contracts";
+import {
+  healthResponseSchema,
+  readinessResponseSchema,
+} from "@shop/contracts";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 export const openApiDocument = {
@@ -19,6 +22,36 @@ export const openApiDocument = {
             content: {
               "application/json": {
                 schema: zodToJsonSchema(healthResponseSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/ready": {
+      get: {
+        summary: "Sprawdza dostępność API i bazy danych",
+        operationId: "getReadiness",
+        responses: {
+          "200": {
+            description: "API i baza danych są dostępne.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(readinessResponseSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+          "503": {
+            description: "Baza danych jest niedostępna.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(readinessResponseSchema, {
                   target: "openApi3",
                   $refStrategy: "none",
                 }),
