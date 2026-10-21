@@ -88,6 +88,38 @@ W razie problemu `./deploy/scripts/rollback.sh staging` (lub `production`)
 przywraca poprzednią wersję aplikacji. Rollback nie cofa schematu ani danych
 bazy; migracje wdrożeniowe muszą pozostać kompatybilne ze starą wersją aplikacji.
 
+### Monitorowanie i alerty
+
+Skrypt monitorujący sprawdza HTTPS strony głównej oraz `/ready` API. Alert
+wysyła tylko przy zmianie stanu (awaria/powrót), przez Slack-compatible
+incoming webhook; po odzyskaniu dostępności wysyła powiadomienie o powrocie.
+Wymaga `curl` i Python 3. Ustaw URL webhooka w zmiennej `ALERT_WEBHOOK_URL`
+procesu uruchamiającego skrypt; przykładowy plik `deploy/.env.monitoring`
+można zabezpieczyć przez `chmod 600`.
+
+```bash
+cp deploy/.env.monitoring.example deploy/.env.monitoring
+chmod 600 deploy/.env.monitoring
+# Wstaw URL Slack-compatible webhooka do pliku.
+set -a
+. deploy/.env.monitoring
+set +a
+./deploy/scripts/monitor.sh production https://shop.example.com https://api.shop.example.com
+```
+
+Uruchamiaj polecenie co 5 minut z crona (z katalogu repozytorium), przekierowując
+wyjście do chronionego pliku logu. Pierwszy poprawny odczyt jest traktowany jako
+stan początkowy bez wysyłania alertu. Jeśli webhook nie jest ustawiony lub nie
+odpowiada, skrypt kończy się błędem, więc awaria dostarczenia alertu nie jest
+ukrywana. To podstawowy monitoring dostępności HTTP; logi wyjątków API nadal
+wymagają osobnego centralnego zbierania.
+
+Przykładowy wpis crona (zmień ścieżkę repozytorium i domeny):
+
+```cron
+*/5 * * * * cd /srv/shop && set -a && . deploy/.env.monitoring && set +a && ./deploy/scripts/monitor.sh production https://shop.example.com https://api.shop.example.com >> /var/log/shop-monitor.log 2>&1
+```
+
 Przydatne polecenia:
 
 ```bash

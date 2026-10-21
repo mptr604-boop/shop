@@ -8,6 +8,7 @@ coverage/
 !.env.example
 deploy/.env.*
 !deploy/.env.*.example
+!deploy/.env.monitoring.example
 deploy/.state/
 deploy/backups/
 npm-debug.log*
