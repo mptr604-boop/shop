@@ -6,7 +6,7 @@ import {
   orderSchema,
 } from "@shop/contracts";
 import { ensureCart } from "../cart/cart.middleware.js";
-import { createOrder, getOrder } from "./orders.service.js";
+import { cancelOrder, createOrder, getOrder } from "./orders.service.js";
 
 export const ordersRouter = Router();
 
@@ -27,6 +27,19 @@ ordersRouter.post("/", async (request, response) => {
 
   const order = await createOrder(response.locals.cartId, input.data);
   response.status(201).json(orderSchema.parse(order));
+});
+
+ordersRouter.post("/:id/cancel", async (request, response) => {
+  const orderId = orderIdSchema.safeParse(request.params.id);
+  if (!orderId.success) {
+    response
+      .status(400)
+      .json(apiErrorSchema.parse({ message: "Nieprawidłowy numer zamówienia." }));
+    return;
+  }
+
+  const order = await cancelOrder(orderId.data, response.locals.cartId);
+  response.json(orderSchema.parse(order));
 });
 
 ordersRouter.get("/:id", async (request, response) => {

@@ -425,6 +425,46 @@ export const openApiDocument = {
           },
         },
       },
+      post: {
+          summary: "Anuluje zamówienie i przywraca produkty do magazynu",
+          operationId: "cancelOrder",
+          security: [{ CartCookie: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: zodToJsonSchema(orderIdSchema, {
+                target: "openApi3",
+                $refStrategy: "none",
+              }),
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Anulowane zamówienie.",
+              content: {
+                "application/json": {
+                  schema: zodToJsonSchema(orderSchema, {
+                    target: "openApi3",
+                    $refStrategy: "none",
+                  }),
+              },
+            },
+            "404": {
+              description: "Nie znaleziono zamówienia dla tego koszyka.",
+              content: {
+                "application/json": {
+                  schema: zodToJsonSchema(apiErrorSchema, {
+                    target: "openApi3",
+                    $refStrategy: "none",
+                  }),
+                },
+              },
+            },
+          },
+        },
+      },
     },
   },
 };

@@ -265,6 +265,71 @@ describe("orders API", () => {
     assert.equal(response.status, 404);
   });
 
+  it("cancels an order and restores stock only once", async (context) => {
+    const cookie = await createTestCart();
+    const otherCookie = await createTestCart();
+    const product = await addSeedProduct(cookie);
+    context.after(async () => {
+      await deleteTestCart(cookie);
+      await deleteTestCart(otherCookie);
+      await restoreProductStock(product.id, product.stockQuantity);
+    });
+
+    const createResponse = await fetch(`${baseUrl}/orders`, {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify(customer),
+    });
+    assert.equal(createResponse.status, 201);
+    const order = await createResponse.json();
+
+    const unauthorizedCancelResponse = await fetch(
+      `${baseUrl}/orders/${order.id}/cancel`,
+      { method: "POST", headers: { Cookie: otherCookie } },
+    );
+    assert.equal(unauthorizedCancelResponse.status, 404);
+
+    const stockAfterOrder = await pool.query<{ stock_quantity: number }>(
+      "SELECT stock_quantity FROM products WHERE id = $1",
+      [product.id],
+    );
+    assert.equal(
+      stockAfterOrder.rows[0].stock_quantity,
+      product.stockQuantity - 2,
+    );
+
+    const cancelResponse = await fetch(
+      `${baseUrl}/orders/${order.id}/cancel`,
+      { method: "POST", headers: { Cookie: cookie } },
+    );
+    assert.equal(cancelResponse.status, 200);
+    assert.equal((await cancelResponse.json()).status, "cancelled");
+
+    const stockAfterCancellation = await pool.query<{ stock_quantity: number }>(
+      "SELECT stock_quantity FROM products WHERE id = $1",
+      [product.id],
+    );
+    assert.equal(
+      stockAfterCancellation.rows[0].stock_quantity,
+      product.stockQuantity,
+    );
+
+    const repeatedCancelResponse = await fetch(
+      `${baseUrl}/orders/${order.id}/cancel`,
+      { method: "POST", headers: { Cookie: cookie } },
+    );
+    assert.equal(repeatedCancelResponse.status, 200);
+    assert.equal((await repeatedCancelResponse.json()).status, "cancelled");
+
+    const stockAfterRepeatedCancellation = await pool.query<{
+      stock_quantity: number;
+    }>("SELECT stock_quantity FROM products WHERE id = $1", [product.id]);
+    assert.equal(
+      stockAfterRepeatedCancellation.rows[0].stock_quantity,
+      product.stockQuantity,
+    );
+  });
+
   it("prevents two carts from ordering the same remaining stock", async (context) => {
     const firstCookie = await createTestCart();
     const secondCookie = await createTestCart();

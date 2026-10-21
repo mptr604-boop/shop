@@ -165,3 +165,69 @@ export async function findOrderForCart(orderId: string, cartId: string) {
     })),
   };
 }
+
+export async function cancelOrderRecord(orderId: string, cartId: string) {
+  const result = await db.transaction(async (transaction) => {
+    const [order] = await transaction
+      .select({ id: orders.id, status: orders.status })
+      .from(orders)
+      .where(and(eq(orders.id, orderId), eq(orders.cartId, cartId)))
+      .for("update");
+
+    if (!order) {
+      return { kind: "not-found" as const };
+    }
+
+    if (order.status === "pending_payment") {
+      const items = await transaction
+        .select({
+          productId: orderItems.productId,
+          quantity: orderItems.quantity,
+        })
+        .from(orderItems)
+        .where(eq(orderItems.orderId, orderId));
+      const quantityByProduct = new Map<string, number>();
+
+      for (const item of items) {
+        if (item.productId) {
+          quantityByProduct.set(
+            item.productId,
+            (quantityByProduct.get(item.productId) ?? 0) + item.quantity,
+          );
+        }
+      }
+
+      const productIds = [...quantityByProduct.keys()].sort();
+      if (productIds.length > 0) {
+        await transaction
+          .select({ id: products.id })
+          .from(products)
+          .where(inArray(products.id, productIds))
+          .orderBy(products.id)
+          .for("update");
+
+        for (const [productId, quantity] of quantityByProduct) {
+          await transaction
+            .update(products)
+            .set({
+              stockQuantity: sql`${products.stockQuantity} + ${quantity}`,
+            })
+            .where(eq(products.id, productId));
+        }
+      }
+
+      await transaction
+        .update(orders)
+        .set({ status: "cancelled" })
+        .where(eq(orders.id, orderId));
+    }
+
+    return { kind: "cancelled" as const };
+  });
+
+  if (result.kind === "not-found") {
+    return null;
+  }
+
+  return findOrderForCart(orderId, cartId);
+}

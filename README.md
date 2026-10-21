@@ -38,7 +38,9 @@ koszyk sprawdza dostępność, a API atomowo ponownie weryfikuje i odejmuje sztu
 podczas tworzenia zamówienia, żeby równoległe zakupy nie sprzedały tego samego
 stanu dwa razy. Checkout tworzy zamówienie z danymi dostawy i kopią pozycji
 koszyka; płatności nie są jeszcze obsługiwane.
-API udostępnia `POST /orders` i `GET /orders/{id}`.
+Klient może anulować nieopłacone zamówienie przez
+`POST /orders/{id}/cancel`; stan magazynowy wraca wtedy do poprzedniej
+wartości. API udostępnia też `POST /orders` i `GET /orders/{id}`.
 
 Przydatne polecenia:
 

@@ -45,3 +45,11 @@ export function createOrder(request: Request, input: CreateOrderInput) {
 export function getOrder(request: Request, id: string) {
   return requestOrderApi(request, `/orders/${encodeURIComponent(id)}`);
 }
+
+export function cancelOrder(request: Request, id: string) {
+  return requestOrderApi(
+    request,
+    `/orders/${encodeURIComponent(id)}/cancel`,
+    { method: "POST" },
+  );
+}

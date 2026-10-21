@@ -4,6 +4,7 @@ import {
   type Order,
 } from "@shop/contracts";
 import {
+  cancelOrderRecord,
   createOrderRecord,
   findOrderForCart,
 } from "./orders.repository.js";
@@ -51,6 +52,18 @@ export async function getOrder(
   cartId: string,
 ): Promise<Order> {
   const order = await findOrderForCart(orderId, cartId);
+  if (!order) {
+    throw new OrderServiceError("Nie znaleziono zamówienia.", 404);
+  }
+
+  return orderSchema.parse(order);
+}
+
+export async function cancelOrder(
+  orderId: string,
+  cartId: string,
+): Promise<Order> {
+  const order = await cancelOrderRecord(orderId, cartId);
   if (!order) {
     throw new OrderServiceError("Nie znaleziono zamówienia.", 404);
   }

@@ -1,12 +1,15 @@
 import {
   data,
+  Form,
   Link,
   isRouteErrorResponse,
+  redirect,
+  useActionData,
   useLoaderData,
   useRouteError,
 } from "react-router";
 import type { Route } from "./+types/checkout-complete";
-import { getOrder } from "../services/orders.server";
+import { cancelOrder, getOrder } from "../services/orders.server";
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   if (!params.id) {
@@ -17,6 +20,22 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     { order },
     { headers: setCookie ? { "Set-Cookie": setCookie } : undefined },
   );
+}
+
+export async function action({ params, request }: Route.ActionArgs) {
+  if (!params.id) {
+    throw new Response("Nie podano numeru zamówienia.", { status: 400 });
+  }
+
+  const formData = await request.formData();
+  if (formData.get("intent") !== "cancel") {
+    return data({ error: "Nieznana operacja zamówienia." }, { status: 400 });
+  }
+
+  const { setCookie } = await cancelOrder(request, params.id);
+  return redirect(`/checkout/complete/${params.id}`, {
+    headers: setCookie ? { "Set-Cookie": setCookie } : undefined,
+  });
 }
 
 function formatPrice(priceInCents: number, currency: string) {
@@ -35,15 +54,22 @@ export function meta(_args: Route.MetaArgs) {
 
 export default function CheckoutCompletePage() {
   const { order } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
 
   return (
     <main className="page">
       <header className="page-header">
-        <p className="eyebrow">Zamówienie utworzone</p>
+        <p className="eyebrow">
+          {order.status === "pending_payment"
+            ? "Zamówienie utworzone"
+            : "Zamówienie anulowane"}
+        </p>
         <h1>Dziękujemy, {order.customerName}!</h1>
         <p className="intro">
-          Zamówienie <strong>{order.id}</strong> zapisaliśmy jako oczekujące na
-          płatność. W tej wersji sklepu płatności nie są obsługiwane.
+          Zamówienie <strong>{order.id}</strong>{" "}
+          {order.status === "pending_payment"
+            ? "oczekuje na płatność. W tej wersji sklepu płatności nie są obsługiwane."
+            : "zostało anulowane, a produkty wróciły do magazynu."}
         </p>
       </header>
 
@@ -76,6 +102,20 @@ export default function CheckoutCompletePage() {
           {order.email}
         </p>
       </section>
+
+      {actionData?.error && (
+        <p className="form-error" role="alert">
+          {actionData.error}
+        </p>
+      )}
+      {order.status === "pending_payment" && (
+        <Form className="cancel-order-form" method="post">
+          <input name="intent" type="hidden" value="cancel" />
+          <button className="text-button" type="submit">
+            Anuluj zamówienie i zwróć produkty do magazynu
+          </button>
+        </Form>
+      )}
 
       <Link className="primary-link" to="/">
         Wróć do sklepu
