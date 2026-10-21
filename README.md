@@ -50,7 +50,9 @@ wygeneruj hash hasła przez `npm run admin:hash-password` i ustaw
 `ADMIN_PASSWORD_HASH`. Panel używa losowego cookie sesji `HttpOnly`,
 `SameSite=Strict`, ważnego 8 godzin; w PostgreSQL przechowywany jest tylko
 skrót tokenu. Wylogowanie unieważnia sesję również po stronie serwera. Panel
-zarządza stanami produktów i pokazuje 50 ostatnich zamówień. Nie używaj
+pozwala dodawać, edytować i usuwać produkty oraz pokazuje 50 ostatnich
+zamówień. Usunięcie produktu usuwa go z aktywnych koszyków, ale zachowuje
+nazwę i cenę jako historyczny zapis w istniejących zamówieniach. Nie używaj
 przykładowych ani słabych haseł na środowisku produkcyjnym.
 
 Przydatne polecenia:

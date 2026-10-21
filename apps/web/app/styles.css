@@ -506,6 +506,33 @@ h1 {
   border-top: 1px solid #e1e7e2;
 }
 
+.admin-product-form {
+  display: grid;
+  flex: 1;
+  gap: 0.75rem;
+  max-width: 760px;
+}
+
+.admin-product-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.checkout-form textarea {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #cbd6cd;
+  border-radius: 0.45rem;
+  font: inherit;
+  resize: vertical;
+}
+
+.admin-product-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
 .admin-product h3,
 .admin-order h3 {
   margin: 0 0 0.3rem;
@@ -582,6 +609,10 @@ h1 {
   .admin-order {
     align-items: start;
     flex-direction: column;
+  }
+
+  .admin-product-fields {
+    grid-template-columns: 1fr;
   }
 
   .admin-order-total {

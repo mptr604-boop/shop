@@ -137,6 +137,8 @@ describe("orders API", () => {
         "/admin/dashboard",
         "/admin/login",
         "/admin/logout",
+        "/admin/products",
+        "/admin/products/{id}",
         "/admin/products/{id}/stock",
         "/admin/session",
       ],
@@ -147,6 +149,13 @@ describe("orders API", () => {
     const dashboardDocumentation = openApi.paths["/admin/dashboard"] as {
       get: { responses: Record<string, unknown> };
     };
+    const productDocumentation = openApi.paths["/admin/products"] as {
+      post: { responses: Record<string, unknown> };
+    };
+    const productIdDocumentation = openApi.paths["/admin/products/{id}"] as {
+      patch: { responses: Record<string, unknown> };
+      delete: { responses: Record<string, unknown> };
+    };
     assert.deepEqual(
       Object.keys(loginDocumentation.post.responses).sort(),
       ["200", "401", "503"],
@@ -154,6 +163,18 @@ describe("orders API", () => {
     assert.deepEqual(
       Object.keys(dashboardDocumentation.get.responses).sort(),
       ["200", "401"],
+    );
+    assert.deepEqual(
+      Object.keys(productDocumentation.post.responses).sort(),
+      ["201", "400", "409"],
+    );
+    assert.deepEqual(
+      Object.keys(productIdDocumentation.patch.responses).sort(),
+      ["200", "400", "404", "409"],
+    );
+    assert.deepEqual(
+      Object.keys(productIdDocumentation.delete.responses).sort(),
+      ["204", "400", "404"],
     );
 
     const unauthenticated = await fetch(`${baseUrl}/admin/dashboard`);
@@ -221,6 +242,77 @@ describe("orders API", () => {
       assert.equal((await update.json()).stockQuantity, updatedStock);
     } finally {
       await restoreProductStock(product.id, product.stockQuantity);
+    }
+
+    const testSlug = `test-admin-product-${Date.now()}`;
+    const productInput = {
+      name: "Produkt testowy admina",
+      slug: testSlug,
+      description: "Testowa edycja produktu.",
+      priceInCents: 1234,
+      currency: "PLN",
+      stockQuantity: 5,
+    };
+    const invalidProduct = await fetch(`${baseUrl}/admin/products`, {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ ...productInput, slug: "Niepoprawny slug!" }),
+    });
+    assert.equal(invalidProduct.status, 400);
+
+    const createdProductResponse = await fetch(`${baseUrl}/admin/products`, {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify(productInput),
+    });
+    assert.equal(createdProductResponse.status, 201);
+    const createdProduct = await createdProductResponse.json();
+
+    try {
+      const duplicateSlug = await fetch(`${baseUrl}/admin/products`, {
+        method: "POST",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...productInput,
+          name: "Inny produkt testowy",
+        }),
+      });
+      assert.equal(duplicateSlug.status, 409);
+
+      const updatedProductResponse = await fetch(
+        `${baseUrl}/admin/products/${createdProduct.id}`,
+        {
+          method: "PATCH",
+          headers: { Cookie: cookie, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...productInput,
+            name: "Zmieniony produkt testowy",
+            slug: `${testSlug}-zmieniony`,
+            stockQuantity: 8,
+          }),
+        },
+      );
+      assert.equal(updatedProductResponse.status, 200);
+      assert.equal(
+        (await updatedProductResponse.json()).name,
+        "Zmieniony produkt testowy",
+      );
+
+      const deleteResponse = await fetch(
+        `${baseUrl}/admin/products/${createdProduct.id}`,
+        { method: "DELETE", headers: { Cookie: cookie } },
+      );
+      assert.equal(deleteResponse.status, 204);
+      assert.equal(await deleteResponse.text(), "");
+      const deletedAgain = await fetch(
+        `${baseUrl}/admin/products/${createdProduct.id}`,
+        { method: "DELETE", headers: { Cookie: cookie } },
+      );
+      assert.equal(deletedAgain.status, 404);
+    } finally {
+      await pool.query("DELETE FROM products WHERE id = $1", [
+        createdProduct.id,
+      ]);
     }
 
     const logout = await fetch(`${baseUrl}/admin/logout`, {

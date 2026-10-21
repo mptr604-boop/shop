@@ -1,6 +1,7 @@
 import {
   adminDashboardSchema,
   adminLoginSchema,
+  adminProductInputSchema,
   adminSessionSchema,
   addCartItemSchema,
   apiErrorSchema,
@@ -199,6 +200,99 @@ export const openApiDocument = {
             },
           },
           "401": { description: "Wymagane logowanie administratora." },
+          "404": { description: "Nie znaleziono produktu." },
+        },
+      },
+    },
+    "/admin/products": {
+      post: {
+        summary: "Dodaje produkt",
+        operationId: "createAdminProduct",
+        security: [{ AdminCookie: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: zodToJsonSchema(adminProductInputSchema, {
+                target: "openApi3",
+                $refStrategy: "none",
+              }),
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Utworzony produkt.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(productSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+          "400": { description: "Nieprawidłowe dane produktu." },
+          "409": { description: "Adres produktu jest już zajęty." },
+        },
+      },
+    },
+    "/admin/products/{id}": {
+      patch: {
+        summary: "Edytuje produkt",
+        operationId: "updateAdminProduct",
+        security: [{ AdminCookie: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: zodToJsonSchema(adminProductInputSchema, {
+                target: "openApi3",
+                $refStrategy: "none",
+              }),
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Zaktualizowany produkt.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(productSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+          "400": { description: "Nieprawidłowe dane produktu." },
+          "404": { description: "Nie znaleziono produktu." },
+          "409": { description: "Adres produktu jest już zajęty." },
+        },
+      },
+      delete: {
+        summary: "Usuwa produkt",
+        operationId: "deleteAdminProduct",
+        security: [{ AdminCookie: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          "204": { description: "Produkt został usunięty." },
+          "400": { description: "Nieprawidłowy identyfikator produktu." },
           "404": { description: "Nie znaleziono produktu." },
         },
       },

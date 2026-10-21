@@ -25,12 +25,15 @@ export type {
 export {
   adminDashboardSchema,
   adminLoginSchema,
+  adminProductIdSchema,
+  adminProductInputSchema,
   adminSessionSchema,
   updateStockSchema,
 } from "./admin.js";
 export type {
   AdminDashboard,
   AdminLoginInput,
+  AdminProductInput,
   AdminSession,
   UpdateStockInput,
 } from "./admin.js";

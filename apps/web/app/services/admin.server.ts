@@ -2,6 +2,7 @@ import {
   adminDashboardSchema,
   adminLoginSchema,
   apiErrorSchema,
+  type AdminProductInput,
   productSchema,
   type AdminLoginInput,
 } from "@shop/contracts";
@@ -30,7 +31,7 @@ async function requestAdminApi(
   }
 
   return {
-    body: (await response.json()) as unknown,
+    body: response.status === 204 ? undefined : ((await response.json()) as unknown),
     setCookie: response.headers.get("Set-Cookie"),
   };
 }
@@ -57,22 +58,46 @@ export async function getAdminDashboard(request: Request) {
   };
 }
 
-export async function updateProductStock(
+export async function createAdminProduct(
+  request: Request,
+  input: AdminProductInput,
+) {
+  const result = await requestAdminApi(request, "/products", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return {
+    product: productSchema.parse(result.body),
+    setCookie: result.setCookie,
+  };
+}
+
+export async function updateAdminProduct(
   request: Request,
   productId: string,
-  stockQuantity: number,
+  input: AdminProductInput,
 ) {
   const result = await requestAdminApi(
     request,
-    `/products/${encodeURIComponent(productId)}/stock`,
+    `/products/${encodeURIComponent(productId)}`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stockQuantity }),
+      body: JSON.stringify(input),
     },
   );
   return {
     product: productSchema.parse(result.body),
     setCookie: result.setCookie,
   };
+}
+
+export async function deleteAdminProduct(request: Request, productId: string) {
+  const result = await requestAdminApi(
+    request,
+    `/products/${encodeURIComponent(productId)}`,
+    { method: "DELETE" },
+  );
+  return { setCookie: result.setCookie };
 }

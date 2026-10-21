@@ -7,12 +7,14 @@ import {
   useLoaderData,
   useRouteError,
 } from "react-router";
-import { updateStockSchema } from "@shop/contracts";
+import { adminProductInputSchema } from "@shop/contracts";
 import type { Route } from "./+types/admin";
 import {
+  createAdminProduct,
+  deleteAdminProduct,
   getAdminDashboard,
   logoutAdmin,
-  updateProductStock,
+  updateAdminProduct,
 } from "../services/admin.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -41,26 +43,58 @@ export async function action({ request }: Route.ActionArgs) {
     });
   }
 
-  if (intent !== "update-stock") {
-    return data({ error: "Nieznana operacja panelu." }, { status: 400 });
+  if (intent === "create-product" || intent === "update-product") {
+    const input = adminProductInputSchema.safeParse({
+      name: formData.get("name"),
+      slug: formData.get("slug"),
+      description: formData.get("description") || null,
+      priceInCents: Number(formData.get("priceInCents")),
+      currency: formData.get("currency"),
+      stockQuantity: Number(formData.get("stockQuantity")),
+    });
+    if (!input.success) {
+      return data(
+        { error: "Sprawdź dane produktu. Adres musi zawierać małe litery i myślniki." },
+        { status: 400 },
+      );
+    }
+
+    try {
+      if (intent === "create-product") {
+        await createAdminProduct(request, input.data);
+      } else {
+        const productId = formData.get("productId");
+        if (typeof productId !== "string" || productId.length === 0) {
+          return data({ error: "Nie podano produktu." }, { status: 400 });
+        }
+        await updateAdminProduct(request, productId, input.data);
+      }
+    } catch (error) {
+      if (error instanceof Response) {
+        return data({ error: await error.text() }, { status: error.status });
+      }
+      throw error;
+    }
+    return redirect("/admin");
   }
 
-  const productId = formData.get("productId");
-  if (typeof productId !== "string" || productId.length === 0) {
-    return data({ error: "Nie podano produktu." }, { status: 400 });
-  }
-  const stock = updateStockSchema.safeParse({
-    stockQuantity: Number(formData.get("stockQuantity")),
-  });
-  if (!stock.success) {
-    return data(
-      { error: "Stan magazynowy musi być liczbą od 0 do 1 000 000." },
-      { status: 400 },
-    );
+  if (intent === "delete-product") {
+    const productId = formData.get("productId");
+    if (typeof productId !== "string" || productId.length === 0) {
+      return data({ error: "Nie podano produktu." }, { status: 400 });
+    }
+    try {
+      await deleteAdminProduct(request, productId);
+    } catch (error) {
+      if (error instanceof Response) {
+        return data({ error: await error.text() }, { status: error.status });
+      }
+      throw error;
+    }
+    return redirect("/admin");
   }
 
-  await updateProductStock(request, productId, stock.data.stockQuantity);
-  return redirect("/admin");
+  return data({ error: "Nieznana operacja panelu." }, { status: 400 });
 }
 
 function formatPrice(priceInCents: number, currency: string) {
@@ -100,22 +134,117 @@ export default function AdminPage() {
       )}
 
       <section className="admin-section" aria-labelledby="inventory-heading">
-        <h2 id="inventory-heading">Produkty i stany magazynowe</h2>
+        <h2 id="inventory-heading">Produkty</h2>
+        <Form className="checkout-form admin-product-form" method="post">
+          <input name="intent" type="hidden" value="create-product" />
+          <h3>Dodaj produkt</h3>
+          <label>
+            Nazwa
+            <input maxLength={255} minLength={2} name="name" required />
+          </label>
+          <label>
+            Adres produktu
+            <input
+              maxLength={255}
+              name="slug"
+              pattern="[a-z0-9]+(-[a-z0-9]+)*"
+              required
+            />
+          </label>
+          <label>
+            Opis
+            <textarea maxLength={2000} name="description" rows={3} />
+          </label>
+          <div className="admin-product-fields">
+            <label>
+              Cena (grosze)
+              <input
+                max={100_000_000}
+                min={0}
+                name="priceInCents"
+                required
+                type="number"
+              />
+            </label>
+            <label>
+              Waluta
+              <input
+                defaultValue="PLN"
+                maxLength={3}
+                minLength={3}
+                name="currency"
+                pattern="[A-Z]{3}"
+                required
+              />
+            </label>
+            <label>
+              Stan
+              <input
+                defaultValue={0}
+                max={1_000_000}
+                min={0}
+                name="stockQuantity"
+                required
+                type="number"
+              />
+            </label>
+          </div>
+          <button className="primary-button" type="submit">
+            Dodaj produkt
+          </button>
+        </Form>
         <ul className="admin-product-list">
           {dashboard.products.map((product) => (
             <li className="admin-product" key={product.id}>
-              <div>
-                <h3>{product.name}</h3>
-                <p>
-                  {product.slug} ·{" "}
-                  {formatPrice(product.priceInCents, product.currency)}
-                </p>
-              </div>
-              <Form className="admin-stock-form" method="post">
-                <input name="intent" type="hidden" value="update-stock" />
+              <Form className="checkout-form admin-product-form" method="post">
+                <input name="intent" type="hidden" value="update-product" />
                 <input name="productId" type="hidden" value={product.id} />
-                <label>
-                  Stan
+                <h3>{product.name}</h3>
+                <div className="admin-product-fields">
+                  <label>
+                    Nazwa
+                    <input
+                      defaultValue={product.name}
+                      maxLength={255}
+                      minLength={2}
+                      name="name"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Adres produktu
+                    <input
+                      defaultValue={product.slug}
+                      maxLength={255}
+                      name="slug"
+                      pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Cena (grosze)
+                    <input
+                      defaultValue={product.priceInCents}
+                      max={100_000_000}
+                      min={0}
+                      name="priceInCents"
+                      required
+                      type="number"
+                    />
+                  </label>
+                  <label>
+                    Waluta
+                    <input
+                      defaultValue={product.currency}
+                      maxLength={3}
+                      minLength={3}
+                      name="currency"
+                      pattern="[A-Z]{3}"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Stan
                   <input
                     aria-label={`Stan magazynowy: ${product.name}`}
                     defaultValue={product.stockQuantity}
@@ -125,9 +254,35 @@ export default function AdminPage() {
                     required
                     type="number"
                   />
+                  </label>
+                </div>
+                <label>
+                  Opis
+                  <textarea
+                    defaultValue={product.description ?? ""}
+                    maxLength={2000}
+                    name="description"
+                    rows={3}
+                  />
                 </label>
-                <button className="secondary-button" type="submit">
-                  Zapisz
+                <div className="admin-product-actions">
+                  <button className="secondary-button" type="submit">
+                    Zapisz zmiany
+                  </button>
+                </div>
+              </Form>
+              <Form
+                method="post"
+                onSubmit={(event) => {
+                  if (!window.confirm(`Usunąć produkt „${product.name}”?`)) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                <input name="intent" type="hidden" value="delete-product" />
+                <input name="productId" type="hidden" value={product.id} />
+                <button className="text-button" type="submit">
+                  Usuń
                 </button>
               </Form>
             </li>
