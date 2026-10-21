@@ -101,6 +101,8 @@ job `verify`. Wdrożenie przez SSH uruchamia na VPS-ie istniejące
 `deploy/scripts/deploy.sh`, więc nadal wykonuje backup, migracje i health checki.
 Jeśli `main` zmieni się zanim wdrożenie dotrze do VPS-a, stary run zostanie
 odrzucony zamiast cofnąć nowszy release.
+Dependabot co tydzień proponuje grupowane aktualizacje zależności npm i GitHub
+Actions jako osobne pull requesty; każdy z nich przechodzi przez ten sam CI.
 
 Przed włączeniem automatyzacji:
 
