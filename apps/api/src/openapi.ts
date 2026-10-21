@@ -208,7 +208,7 @@ export const openApiDocument = {
             },
           },
           "409": {
-            description: "Przekroczono limit ilości produktu w koszyku.",
+            description: "Przekroczono limit ilości lub stan magazynowy.",
             content: {
               "application/json": {
                 schema: zodToJsonSchema(apiErrorSchema, {
@@ -270,6 +270,17 @@ export const openApiDocument = {
           },
           "404": {
             description: "Nie znaleziono produktu lub pozycji w koszyku.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(apiErrorSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+          "409": {
+            description: "Ilość przekracza dostępny stan magazynowy.",
             content: {
               "application/json": {
                 schema: zodToJsonSchema(apiErrorSchema, {
@@ -359,7 +370,8 @@ export const openApiDocument = {
             },
           },
           "409": {
-            description: "Koszyk jest pusty albo zawiera różne waluty.",
+            description:
+              "Koszyk jest pusty, zawiera różne waluty albo brakuje sztuk w magazynie.",
             content: {
               "application/json": {
                 schema: zodToJsonSchema(apiErrorSchema, {

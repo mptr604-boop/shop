@@ -78,14 +78,23 @@ export default function ProductDetail() {
               Ilość
               <input
                 defaultValue={1}
-                max={99}
+                max={Math.max(1, Math.min(99, product.stockQuantity))}
                 min={1}
                 name="quantity"
                 type="number"
               />
             </label>
-            <button type="submit">Dodaj do koszyka</button>
+            <button disabled={product.stockQuantity === 0} type="submit">
+              {product.stockQuantity === 0
+                ? "Brak w magazynie"
+                : "Dodaj do koszyka"}
+            </button>
           </Form>
+          <p className="stock-status">
+            {product.stockQuantity > 0
+              ? `Dostępne sztuki: ${product.stockQuantity}`
+              : "Produkt jest chwilowo niedostępny."}
+          </p>
           {actionData?.error && (
             <p className="form-error" role="alert">
               {actionData.error}
@@ -100,11 +109,20 @@ export default function ProductDetail() {
 export function ErrorBoundary() {
   const error = useRouteError();
   const isNotFound = isRouteErrorResponse(error) && error.status === 404;
+  const message =
+    isRouteErrorResponse(error) && typeof error.data === "string"
+      ? error.data
+      : null;
 
   return (
     <main className="page">
       <p className="eyebrow">{isNotFound ? "404" : "Błąd"}</p>
-      <h1>{isNotFound ? "Nie znaleziono produktu." : "Nie udało się wczytać produktu."}</h1>
+      <h1>
+        {isNotFound
+          ? "Nie znaleziono produktu."
+          : "Nie udało się dodać produktu do koszyka."}
+      </h1>
+      {message && <p className="intro">{message}</p>}
       <Link className="back-to-products" to="/">
         ← Wróć do produktów
       </Link>

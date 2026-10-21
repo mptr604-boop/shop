@@ -10,18 +10,21 @@ try {
         slug: "kawa-ziarnista",
         description: "Aromatyczna kawa 100% arabica, palona lokalnie.",
         priceInCents: 4590,
+        stockQuantity: 20,
       },
       {
         name: "Kubek ceramiczny",
         slug: "kubek-ceramiczny",
         description: "Ręcznie wykończony kubek o pojemności 350 ml.",
         priceInCents: 3890,
+        stockQuantity: 20,
       },
       {
         name: "Notes w kropki",
         slug: "notes-w-kropki",
         description: "Twarda oprawa i papier z recyklingu.",
         priceInCents: 2490,
+        stockQuantity: 20,
       },
     ])
     .onConflictDoNothing({ target: products.slug });

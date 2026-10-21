@@ -33,8 +33,11 @@ Koszyk gościa jest dostępny przez `GET /cart`, `POST /cart/items`,
 `PATCH /cart/items/{slug}` i `DELETE /cart/items/{slug}`. API identyfikuje
 koszyk przez losowe cookie `HttpOnly`; w bazie zapisuje jego skrót, a nie
 wartość cookie. Sesja wygasa po 30 dniach bez aktywności. Frontend umożliwia
-dodawanie produktów i zarządzanie koszykiem. Checkout tworzy zamówienie z
-danymi dostawy i kopią pozycji koszyka; płatności nie są jeszcze obsługiwane.
+dodawanie produktów i zarządzanie koszykiem. Produkt ma stan magazynowy:
+koszyk sprawdza dostępność, a API atomowo ponownie weryfikuje i odejmuje sztuki
+podczas tworzenia zamówienia, żeby równoległe zakupy nie sprzedały tego samego
+stanu dwa razy. Checkout tworzy zamówienie z danymi dostawy i kopią pozycji
+koszyka; płatności nie są jeszcze obsługiwane.
 API udostępnia `POST /orders` i `GET /orders/{id}`.
 
 Przydatne polecenia:

@@ -54,6 +54,11 @@ export default function Home() {
                         currency: product.currency,
                       }).format(product.priceInCents / 100)}
                     </strong>
+                    <p className="stock-status">
+                      {product.stockQuantity > 0
+                        ? `Dostępne: ${product.stockQuantity} szt.`
+                        : "Chwilowo niedostępny"}
+                    </p>
                   </div>
                 </Link>
               </li>

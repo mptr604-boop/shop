@@ -51,8 +51,10 @@ async function addSeedProduct(cookie: string) {
   const productResponse = await fetch(`${baseUrl}/products/kawa-ziarnista`);
   assert.equal(productResponse.status, 200);
   const product = (await productResponse.json()) as {
+    id: string;
     slug: string;
     priceInCents: number;
+    stockQuantity: number;
   };
 
   const response = await fetch(`${baseUrl}/cart/items`, {
@@ -63,6 +65,13 @@ async function addSeedProduct(cookie: string) {
   assert.equal(response.status, 200);
 
   return product;
+}
+
+async function restoreProductStock(productId: string, stockQuantity: number) {
+  await pool.query("UPDATE products SET stock_quantity = $1 WHERE id = $2", [
+    stockQuantity,
+    productId,
+  ]);
 }
 
 describe("orders API", () => {
@@ -138,10 +147,43 @@ describe("orders API", () => {
     assert.equal(unknownProduct.status, 404);
   });
 
+  it("rejects adding more items than are in stock", async (context) => {
+    const cookie = await createTestCart();
+    const product = await addSeedProduct(cookie);
+    context.after(async () => {
+      await deleteTestCart(cookie);
+      await restoreProductStock(product.id, product.stockQuantity);
+    });
+    await pool.query("UPDATE products SET stock_quantity = 1 WHERE id = $1", [
+      product.id,
+    ]);
+
+    const response = await fetch(`${baseUrl}/cart/items`, {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ slug: product.slug, quantity: 1 }),
+    });
+
+    assert.equal(response.status, 409);
+
+    const updateResponse = await fetch(
+      `${baseUrl}/cart/items/${product.slug}`,
+      {
+        method: "PATCH",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity: 2 }),
+      },
+    );
+    assert.equal(updateResponse.status, 409);
+  });
+
   it("creates an order, snapshots its items, and empties the cart", async (context) => {
     const cookie = await createTestCart();
-    context.after(() => deleteTestCart(cookie));
     const product = await addSeedProduct(cookie);
+    context.after(async () => {
+      await deleteTestCart(cookie);
+      await restoreProductStock(product.id, product.stockQuantity);
+    });
 
     const response = await fetch(`${baseUrl}/orders`, {
       method: "POST",
@@ -203,12 +245,12 @@ describe("orders API", () => {
   it("does not expose an order to a different guest cart", async (context) => {
     const ownerCookie = await createTestCart();
     const otherCookie = await createTestCart();
+    const product = await addSeedProduct(ownerCookie);
     context.after(async () => {
       await deleteTestCart(ownerCookie);
       await deleteTestCart(otherCookie);
+      await restoreProductStock(product.id, product.stockQuantity);
     });
-
-    await addSeedProduct(ownerCookie);
     const createResponse = await fetch(`${baseUrl}/orders`, {
       method: "POST",
       headers: { Cookie: ownerCookie, "Content-Type": "application/json" },
@@ -221,5 +263,46 @@ describe("orders API", () => {
       headers: { Cookie: otherCookie },
     });
     assert.equal(response.status, 404);
+  });
+
+  it("prevents two carts from ordering the same remaining stock", async (context) => {
+    const firstCookie = await createTestCart();
+    const secondCookie = await createTestCart();
+    const product = await addSeedProduct(firstCookie);
+    await pool.query("UPDATE products SET stock_quantity = 2 WHERE id = $1", [
+      product.id,
+    ]);
+    context.after(async () => {
+      await deleteTestCart(firstCookie);
+      await deleteTestCart(secondCookie);
+      await restoreProductStock(product.id, product.stockQuantity);
+    });
+    const secondAddResponse = await fetch(`${baseUrl}/cart/items`, {
+      method: "POST",
+      headers: { Cookie: secondCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ slug: product.slug, quantity: 2 }),
+    });
+    assert.equal(secondAddResponse.status, 200);
+
+    const firstOrderResponse = await fetch(`${baseUrl}/orders`, {
+      method: "POST",
+      headers: { Cookie: firstCookie, "Content-Type": "application/json" },
+      body: JSON.stringify(customer),
+    });
+    assert.equal(firstOrderResponse.status, 201);
+
+    const secondOrderResponse = await fetch(`${baseUrl}/orders`, {
+      method: "POST",
+      headers: { Cookie: secondCookie, "Content-Type": "application/json" },
+      body: JSON.stringify(customer),
+    });
+    assert.equal(secondOrderResponse.status, 409);
+
+    const secondCart = await fetch(`${baseUrl}/cart`, {
+      headers: { Cookie: secondCookie },
+    });
+    const cartBody = await secondCart.json();
+    assert.equal(cartBody.items[0].quantity, 2);
+    assert.equal(cartBody.items[0].availableStock, 0);
   });
 });

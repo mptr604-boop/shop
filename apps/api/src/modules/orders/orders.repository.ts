@@ -1,12 +1,28 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { CreateOrderInput } from "@shop/contracts";
 import { db } from "../../db/client.js";
 import { cartItems, carts, orderItems, orders, products } from "../../db/schema.js";
 
+type CreatedOrder = {
+  order: typeof orders.$inferSelect;
+  items: {
+    productName: string;
+    unitPriceInCents: number;
+    quantity: number;
+    lineTotalInCents: number;
+  }[];
+};
+
+type CreateOrderResult =
+  | { kind: "empty" }
+  | { kind: "mixed-currencies" }
+  | { kind: "out-of-stock"; productNames: string[] }
+  | ({ kind: "created" } & CreatedOrder);
+
 export async function createOrderRecord(
   cartId: string,
   input: CreateOrderInput,
-) {
+): Promise<CreateOrderResult> {
   return db.transaction(async (transaction) => {
     await transaction
       .select({ id: carts.id })
@@ -14,25 +30,70 @@ export async function createOrderRecord(
       .where(eq(carts.id, cartId))
       .for("update");
 
-    const items = await transaction
+    const cartRows = await transaction
       .select({
         productId: products.id,
-        productName: products.name,
-        unitPriceInCents: products.priceInCents,
-        currency: products.currency,
         quantity: cartItems.quantity,
       })
       .from(cartItems)
       .innerJoin(products, eq(cartItems.productId, products.id))
-      .where(eq(cartItems.cartId, cartId));
+      .where(eq(cartItems.cartId, cartId))
+      .orderBy(products.id);
 
-    if (items.length === 0) {
-      return null;
+    if (cartRows.length === 0) {
+      return { kind: "empty" };
+    }
+
+    const lockedProducts = await transaction
+      .select({
+        id: products.id,
+        productName: products.name,
+        unitPriceInCents: products.priceInCents,
+        currency: products.currency,
+        stockQuantity: products.stockQuantity,
+      })
+      .from(products)
+      .where(
+        inArray(
+          products.id,
+          cartRows.map((item) => item.productId),
+        ),
+      )
+      .orderBy(products.id)
+      .for("update");
+    const productById = new Map(
+      lockedProducts.map((product) => [product.id, product]),
+    );
+    const items = cartRows.map((item) => {
+      const product = productById.get(item.productId);
+      if (!product) {
+        throw new Error(`Product ${item.productId} disappeared during checkout.`);
+      }
+
+      return { ...item, ...product };
+    });
+    const unavailable = items.filter(
+      (item) => item.quantity > item.stockQuantity,
+    );
+    if (unavailable.length > 0) {
+      return {
+        kind: "out-of-stock",
+        productNames: unavailable.map((item) => item.productName),
+      };
     }
 
     const currency = items[0].currency;
     if (items.some((item) => item.currency !== currency)) {
-      return { mixedCurrencies: true as const };
+      return { kind: "mixed-currencies" };
+    }
+
+    for (const item of items) {
+      await transaction
+        .update(products)
+        .set({
+          stockQuantity: sql`${products.stockQuantity} - ${item.quantity}`,
+        })
+        .where(eq(products.id, item.productId));
     }
 
     const totalInCents = items.reduce(
@@ -63,6 +124,7 @@ export async function createOrderRecord(
     await transaction.delete(cartItems).where(eq(cartItems.cartId, cartId));
 
     return {
+      kind: "created",
       order,
       items: items.map((item) => ({
         productName: item.productName,

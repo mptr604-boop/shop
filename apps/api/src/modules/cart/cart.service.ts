@@ -60,7 +60,7 @@ export async function addItem(
   const item = await addProductToCart(cartId, product.id, quantity);
   if (!item) {
     throw new CartServiceError(
-      "Łączna ilość produktu w koszyku nie może przekroczyć 99.",
+      "Ilość w koszyku przekracza dostępny stan magazynowy lub limit 99 sztuk.",
       409,
     );
   }
@@ -78,9 +78,15 @@ export async function updateItem(
     throw new CartServiceError("Nie znaleziono produktu.", 404);
   }
 
-  const item = await setCartItemQuantity(cartId, product.id, quantity);
-  if (!item) {
+  const result = await setCartItemQuantity(cartId, product.id, quantity);
+  if (result === "not-found") {
     throw new CartServiceError("Produkt nie znajduje się w koszyku.", 404);
+  }
+  if (result === "out-of-stock") {
+    throw new CartServiceError(
+      "Wybrana ilość przekracza dostępny stan magazynowy.",
+      409,
+    );
   }
 
   return getCart(cartId);

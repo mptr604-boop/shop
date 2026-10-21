@@ -23,12 +23,18 @@ export async function createOrder(
   input: CreateOrderInput,
 ): Promise<Order> {
   const result = await createOrderRecord(cartId, input);
-  if (!result) {
+  if (result.kind === "empty") {
     throw new OrderServiceError("Koszyk jest pusty.", 409);
   }
-  if ("mixedCurrencies" in result) {
+  if (result.kind === "mixed-currencies") {
     throw new OrderServiceError(
       "Nie można złożyć jednego zamówienia z różnymi walutami.",
+      409,
+    );
+  }
+  if (result.kind === "out-of-stock") {
+    throw new OrderServiceError(
+      `Brak wystarczającej liczby produktów: ${result.productNames.join(", ")}.`,
       409,
     );
   }

@@ -7,6 +7,7 @@ export const productSchema = z.object({
   description: z.string().nullable(),
   priceInCents: z.number().int().nonnegative(),
   currency: z.string().length(3),
+  stockQuantity: z.number().int().nonnegative(),
   createdAt: z.string().datetime(),
 });
 

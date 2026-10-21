@@ -33,6 +33,7 @@ export function findCartItems(cartId: string) {
       name: products.name,
       priceInCents: products.priceInCents,
       currency: products.currency,
+      availableStock: products.stockQuantity,
       quantity: cartItems.quantity,
     })
     .from(cartItems)
@@ -56,17 +57,40 @@ export async function addProductToCart(
   productId: string,
   quantity: number,
 ) {
-  const [item] = await db
-    .insert(cartItems)
-    .values({ cartId, productId, quantity })
-    .onConflictDoUpdate({
-      target: [cartItems.cartId, cartItems.productId],
-      set: { quantity: sql`${cartItems.quantity} + EXCLUDED.quantity` },
-      setWhere: sql`${cartItems.quantity} + EXCLUDED.quantity <= 99`,
-    })
-    .returning({ productId: cartItems.productId });
+  return db.transaction(async (transaction) => {
+    await transaction
+      .select({ id: carts.id })
+      .from(carts)
+      .where(eq(carts.id, cartId))
+      .for("update");
 
-  return item ?? null;
+    const [product] = await transaction
+      .select({ stockQuantity: products.stockQuantity })
+      .from(products)
+      .where(eq(products.id, productId))
+      .for("update");
+    const [existingItem] = await transaction
+      .select({ quantity: cartItems.quantity })
+      .from(cartItems)
+      .where(
+        and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)),
+      );
+
+    const nextQuantity = (existingItem?.quantity ?? 0) + quantity;
+    if (!product || nextQuantity > 99 || nextQuantity > product.stockQuantity) {
+      return false;
+    }
+
+    await transaction
+      .insert(cartItems)
+      .values({ cartId, productId, quantity })
+      .onConflictDoUpdate({
+        target: [cartItems.cartId, cartItems.productId],
+        set: { quantity: sql`${cartItems.quantity} + EXCLUDED.quantity` },
+      });
+
+    return true;
+  });
 }
 
 export async function setCartItemQuantity(
@@ -74,24 +98,58 @@ export async function setCartItemQuantity(
   productId: string,
   quantity: number,
 ) {
-  const [item] = await db
-    .update(cartItems)
-    .set({ quantity })
-    .where(
-      and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)),
-    )
-    .returning({ productId: cartItems.productId });
+  return db.transaction(async (transaction) => {
+    await transaction
+      .select({ id: carts.id })
+      .from(carts)
+      .where(eq(carts.id, cartId))
+      .for("update");
 
-  return item ?? null;
+    const [product] = await transaction
+      .select({ stockQuantity: products.stockQuantity })
+      .from(products)
+      .where(eq(products.id, productId))
+      .for("update");
+    const [existingItem] = await transaction
+      .select({ quantity: cartItems.quantity })
+      .from(cartItems)
+      .where(
+        and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)),
+      );
+
+    if (!existingItem) {
+      return "not-found" as const;
+    }
+    if (!product || quantity > product.stockQuantity) {
+      return "out-of-stock" as const;
+    }
+
+    await transaction
+      .update(cartItems)
+      .set({ quantity })
+      .where(
+        and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)),
+      );
+
+    return "updated" as const;
+  });
 }
 
 export async function removeCartItem(cartId: string, productId: string) {
-  const [item] = await db
-    .delete(cartItems)
-    .where(
-      and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)),
-    )
-    .returning({ productId: cartItems.productId });
+  return db.transaction(async (transaction) => {
+    await transaction
+      .select({ id: carts.id })
+      .from(carts)
+      .where(eq(carts.id, cartId))
+      .for("update");
 
-  return item ?? null;
+    const [item] = await transaction
+      .delete(cartItems)
+      .where(
+        and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)),
+      )
+      .returning({ productId: cartItems.productId });
+
+    return item ?? null;
+  });
 }

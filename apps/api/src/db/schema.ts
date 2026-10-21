@@ -18,6 +18,7 @@ export const products = pgTable(
     description: varchar("description", { length: 2000 }),
     priceInCents: integer("price_in_cents").notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("PLN"),
+    stockQuantity: integer("stock_quantity").notNull().default(20),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -26,6 +27,10 @@ export const products = pgTable(
     check(
       "products_price_in_cents_non_negative",
       sql`${table.priceInCents} >= 0`,
+    ),
+    check(
+      "products_stock_quantity_non_negative",
+      sql`${table.stockQuantity} >= 0`,
     ),
   ],
 );

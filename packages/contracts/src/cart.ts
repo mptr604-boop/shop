@@ -15,6 +15,7 @@ export const cartItemSchema = z.object({
   name: z.string().min(1),
   priceInCents: z.number().int().nonnegative(),
   currency: z.string().length(3),
+  availableStock: z.number().int().nonnegative(),
   quantity: z.number().int().min(1).max(99),
   lineTotalInCents: z.number().int().nonnegative(),
 });

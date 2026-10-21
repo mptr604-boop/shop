@@ -130,7 +130,7 @@ export default function CartPage() {
                         Ilość
                         <input
                           defaultValue={item.quantity}
-                          max={99}
+                          max={Math.max(1, Math.min(99, item.availableStock))}
                           min={1}
                           name="quantity"
                           type="number"
@@ -140,6 +140,12 @@ export default function CartPage() {
                         Zmień
                       </button>
                     </Form>
+                    {item.quantity > item.availableStock && (
+                      <p className="form-error" role="alert">
+                        Dostępnych jest już tylko {item.availableStock} szt.
+                        Zmień ilość, aby kontynuować.
+                      </p>
+                    )}
                     <Form method="post">
                       <input name="intent" type="hidden" value="remove" />
                       <input name="slug" type="hidden" value={item.slug} />
@@ -168,9 +174,17 @@ export default function CartPage() {
               </p>
             ))}
             <p className="muted">Koszty dostawy obliczymy przy zamówieniu.</p>
-            <Link className="checkout-button" to="/checkout">
-              Przejdź do kasy
-            </Link>
+            {cart.items.some(
+              (item) => item.quantity > item.availableStock,
+            ) ? (
+              <p className="form-error" role="alert">
+                Zaktualizuj ilości produktów, zanim przejdziesz do kasy.
+              </p>
+            ) : (
+              <Link className="checkout-button" to="/checkout">
+                Przejdź do kasy
+              </Link>
+            )}
           </aside>
         </div>
       )}
