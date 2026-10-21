@@ -25,6 +25,9 @@ Frontend działa pod `http://localhost:5173`, a API pod
 `http://localhost:4000/docs`, a dokument OpenAPI pod
 `http://localhost:4000/openapi.json`. Endpoint `GET /health` sprawdza proces
 API, natomiast `GET /ready` sprawdza również połączenie z bazą danych.
+API zapisuje żądania i nieoczekiwane błędy jako logi JSON z identyfikatorem
+`X-Request-Id`, który można przekazać przy zgłoszeniu problemu. Logi pomijają
+częste sondy `/health` i `/ready`; błędy sprawdzenia bazy nadal są logowane.
 Katalog produktów jest dostępny pod `GET /products`, a szczegóły pojedynczego
 produktu pod `GET /products/{slug}`. Frontend renderuje listę i strony
 szczegółów po stronie serwera.

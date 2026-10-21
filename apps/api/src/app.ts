@@ -14,10 +14,15 @@ import { catalogRouter } from "./modules/catalog/catalog.routes.js";
 import { ordersRouter } from "./modules/orders/orders.routes.js";
 import { OrderServiceError } from "./modules/orders/orders.service.js";
 import { openApiDocument } from "./openapi.js";
+import {
+  logRequestError,
+  requestLoggingMiddleware,
+} from "./middleware/request-logging.js";
 
 export const app = express();
 
 app.disable("x-powered-by");
+app.use(requestLoggingMiddleware);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -51,7 +56,12 @@ app.get("/ready", async (_request, response) => {
       }),
     );
   } catch (error) {
-    console.error("Readiness check failed: database is unavailable", error);
+    logRequestError(
+      _request,
+      response,
+      error,
+      "dependency.unavailable",
+    );
     response.status(503).json(
       readinessResponseSchema.parse({
         status: "error",
@@ -93,7 +103,7 @@ app.use(
       return;
     }
 
-    console.error("Unhandled API error", error);
+    logRequestError(_request, response, error);
     response
       .status(500)
       .json(apiErrorSchema.parse({ message: "Wystąpił nieoczekiwany błąd." }));
