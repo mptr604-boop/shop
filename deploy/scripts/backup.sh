@@ -34,5 +34,15 @@ if ! docker compose --project-name "$project_name" --env-file "$env_file" \
   exit 1
 fi
 
+if ! docker compose --project-name "$project_name" --env-file "$env_file" \
+  -f "$compose_file" exec -T database pg_restore --list \
+  <"$backup_file" >/dev/null; then
+  rm -f "$backup_file"
+  echo "Backup archive validation failed." >&2
+  exit 1
+fi
+
+sha256sum "$backup_file" >"$backup_file.sha256"
 find "$state_dir" -type f -name '*.dump' -mtime +14 -delete
+find "$state_dir" -type f -name '*.dump.sha256' -mtime +14 -delete
 echo "Database backup saved: $backup_file"

@@ -69,3 +69,8 @@ jobs:
 
       - name: Build applications
         run: npm run build
+
+      - name: Build production Docker images
+        run: |
+          docker build -f deploy/Dockerfile --target runtime -t shop:ci .
+          docker build -f deploy/Dockerfile --target migrator -t shop:ci-migrator .
