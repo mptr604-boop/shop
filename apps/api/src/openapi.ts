@@ -1,6 +1,8 @@
 import {
+  apiErrorSchema,
   healthResponseSchema,
   productListSchema,
+  productSchema,
   readinessResponseSchema,
 } from "@shop/contracts";
 import { zodToJsonSchema } from "zod-to-json-schema";
@@ -72,6 +74,44 @@ export const openApiDocument = {
             content: {
               "application/json": {
                 schema: zodToJsonSchema(productListSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/products/{slug}": {
+      get: {
+        summary: "Pobiera produkt po slug",
+        operationId: "getProductBySlug",
+        parameters: [
+          {
+            name: "slug",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Szczegóły produktu.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(productSchema, {
+                  target: "openApi3",
+                  $refStrategy: "none",
+                }),
+              },
+            },
+          },
+          "404": {
+            description: "Nie znaleziono produktu.",
+            content: {
+              "application/json": {
+                schema: zodToJsonSchema(apiErrorSchema, {
                   target: "openApi3",
                   $refStrategy: "none",
                 }),

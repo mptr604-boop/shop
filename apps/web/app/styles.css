@@ -82,6 +82,22 @@ h1 {
   background: #fff;
 }
 
+.product-link {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.product-link:hover h3 {
+  color: #327457;
+}
+
+.product-link:focus-visible {
+  outline: 3px solid #327457;
+  outline-offset: 3px;
+}
+
 .product-art {
   display: grid;
   min-height: 180px;
@@ -115,4 +131,29 @@ h1 {
   border-radius: 0.75rem;
   background: #fff;
   color: #4b5952;
+}
+
+.product-description {
+  max-width: 65ch;
+  color: #4b5952;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.product-detail-price {
+  display: block;
+  margin: 1.5rem 0;
+  font-size: 1.6rem;
+}
+
+.back-to-products {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  color: #327457;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.back-to-products:hover {
+  text-decoration: underline;
 }

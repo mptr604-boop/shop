@@ -1,4 +1,4 @@
-import { useLoaderData } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import type { Route } from "./+types/home";
 import { getProducts } from "../services/api.server";
 
@@ -38,19 +38,24 @@ export default function Home() {
           <ul className="product-grid">
             {products.map((product) => (
               <li className="product-card" key={product.id}>
-                <div className="product-art" aria-hidden="true">
-                  {product.name.slice(0, 1)}
-                </div>
-                <div className="product-details">
-                  <h3>{product.name}</h3>
-                  <p>{product.description}</p>
-                  <strong>
-                    {new Intl.NumberFormat("pl-PL", {
-                      style: "currency",
-                      currency: product.currency,
-                    }).format(product.priceInCents / 100)}
-                  </strong>
-                </div>
+                <Link
+                  className="product-link"
+                  to={`/products/${encodeURIComponent(product.slug)}`}
+                >
+                  <div className="product-art" aria-hidden="true">
+                    {product.name.slice(0, 1)}
+                  </div>
+                  <div className="product-details">
+                    <h3>{product.name}</h3>
+                    <p>{product.description}</p>
+                    <strong>
+                      {new Intl.NumberFormat("pl-PL", {
+                        style: "currency",
+                        currency: product.currency,
+                      }).format(product.priceInCents / 100)}
+                    </strong>
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>
