@@ -1,4 +1,5 @@
 import {
+  Link,
   Links,
   Meta,
   Outlet,
@@ -20,6 +21,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
+        <nav className="site-nav" aria-label="Główna nawigacja">
+          <Link className="site-brand" to="/">
+            Shop
+          </Link>
+          <Link className="cart-nav-link" to="/cart">
+            Koszyk
+          </Link>
+        </nav>
         {children}
         <ScrollRestoration />
         <Scripts />

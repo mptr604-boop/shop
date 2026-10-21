@@ -1,5 +1,16 @@
-import { Link, isRouteErrorResponse, useLoaderData, useRouteError } from "react-router";
+import {
+  Form,
+  Link,
+  data,
+  isRouteErrorResponse,
+  redirect,
+  useActionData,
+  useLoaderData,
+  useRouteError,
+} from "react-router";
+import { addCartItemSchema } from "@shop/contracts";
 import type { Route } from "./+types/product-detail";
+import { addCartItem } from "../services/cart.server";
 import { getProduct } from "../services/api.server";
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -8,6 +19,26 @@ export async function loader({ params }: Route.LoaderArgs) {
   }
 
   return { product: await getProduct(params.slug) };
+}
+
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const input = addCartItemSchema.safeParse({
+    slug: formData.get("slug"),
+    quantity: Number(formData.get("quantity")),
+  });
+
+  if (!input.success) {
+    return data(
+      { error: "Wybierz prawidłową ilość produktu (1–99)." },
+      { status: 400 },
+    );
+  }
+
+  const { setCookie } = await addCartItem(request, input.data);
+  return redirect("/cart", {
+    headers: setCookie ? { "Set-Cookie": setCookie } : undefined,
+  });
 }
 
 export function meta(_args: Route.MetaArgs) {
@@ -19,6 +50,7 @@ export function meta(_args: Route.MetaArgs) {
 
 export default function ProductDetail() {
   const { product } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
   const price = new Intl.NumberFormat("pl-PL", {
     style: "currency",
     currency: product.currency,
@@ -40,6 +72,25 @@ export default function ProductDetail() {
             {product.description ?? "Brak opisu produktu."}
           </p>
           <strong className="product-detail-price">{price}</strong>
+          <Form className="add-to-cart-form" method="post">
+            <input name="slug" type="hidden" value={product.slug} />
+            <label>
+              Ilość
+              <input
+                defaultValue={1}
+                max={99}
+                min={1}
+                name="quantity"
+                type="number"
+              />
+            </label>
+            <button type="submit">Dodaj do koszyka</button>
+          </Form>
+          {actionData?.error && (
+            <p className="form-error" role="alert">
+              {actionData.error}
+            </p>
+          )}
         </div>
       </article>
     </main>
