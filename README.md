@@ -55,6 +55,39 @@ zamówień. Usunięcie produktu usuwa go z aktywnych koszyków, ale zachowuje
 nazwę i cenę jako historyczny zapis w istniejących zamówieniach. Nie używaj
 przykładowych ani słabych haseł na środowisku produkcyjnym.
 
+## Wdrożenie na VPS
+
+Katalog `deploy` zawiera produkcyjny obraz Docker, Compose z PostgreSQL i Caddy
+(automatyczny HTTPS) oraz skrypty wdrożenia i rollbacku. Skrypty uruchamiaj na
+VPS-ie, w czystym checkoutcie repozytorium. VPS powinien mieć Docker z wtyczką
+Compose v2; domeny sklepu i `api.<domena>` dla każdego środowiska muszą
+wskazywać na właściwy serwer, a porty 80 i 443 muszą być otwarte. Na początek
+użyj osobnego VPS-a dla stagingu i produkcji.
+
+Na serwerze skopiuj odpowiedni przykład konfiguracji, ustaw silne hasła i
+uzupełnij hash administratora (wygenerowany lokalnie przez
+`npm run admin:hash-password`). W pliku środowiskowym zapisz hash w
+pojedynczych cudzysłowach, ponieważ zawiera znak `$`. Hasło bazy w
+`DATABASE_URL` musi być URL-bezpieczne, tak by nie wymagało kodowania znaków
+specjalnych.
+
+```bash
+cp deploy/.env.staging.example deploy/.env.staging
+chmod 600 deploy/.env.staging
+# Uzupełnij ustawienia, domenę stagingu oraz hash administratora.
+git pull --ff-only
+./deploy/scripts/deploy.sh staging
+```
+
+Do produkcji użyj osobnego pliku `deploy/.env.production` i uruchom
+`./deploy/scripts/deploy.sh production`. Wdrożenie buduje obraz z bieżącego
+commita, zapisuje backup PostgreSQL przed migracją, uruchamia migracje i
+sprawdza gotowość API oraz SSR. Backupy lokalne na serwerze są przechowywane
+przez 14 dni; skonfiguruj dodatkową kopię poza VPS-em przed użyciem produkcyjnym.
+W razie problemu `./deploy/scripts/rollback.sh staging` (lub `production`)
+przywraca poprzednią wersję aplikacji. Rollback nie cofa schematu ani danych
+bazy; migracje wdrożeniowe muszą pozostać kompatybilne ze starą wersją aplikacji.
+
 Przydatne polecenia:
 
 ```bash

@@ -1,0 +1,15 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+node_modules
+**/node_modules
+**/dist
+**/build
+**/.react-router
+coverage
+deploy/.env.*
+deploy/.state
+deploy/backups
+npm-debug.log*

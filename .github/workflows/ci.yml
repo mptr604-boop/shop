@@ -41,6 +41,20 @@ jobs:
       - name: Configure test database
         run: cp .env.example .env
 
+      - name: Validate deployment configuration
+        env:
+          ADMIN_EMAIL: admin@example.com
+          ADMIN_PASSWORD_HASH: test-placeholder
+          POSTGRES_PASSWORD: test-deployment-password
+          DATABASE_URL: postgresql://shop:test-deployment-password@database:5432/shop_staging
+          SHOP_DOMAIN: staging.example.com
+          SHOP_IMAGE: shop-staging
+        run: |
+          bash -n deploy/scripts/*.sh
+          docker compose --project-name shop-staging \
+            --env-file deploy/.env.staging.example \
+            -f deploy/compose.yml config --quiet
+
       - name: Apply database migrations
         run: npm run db:migrate
 
