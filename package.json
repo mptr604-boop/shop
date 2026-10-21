@@ -1,0 +1,22 @@
+{
+  "name": "shop",
+  "private": true,
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=10"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run build --workspace @shop/contracts && npm run dev --workspace @shop/api",
+    "dev:web": "npm run dev --workspace @shop/web",
+    "build": "npm run build --workspace @shop/contracts && npm run build --workspace @shop/api && npm run build --workspace @shop/web",
+    "typecheck": "npm run typecheck --workspace @shop/contracts && npm run build --workspace @shop/contracts && npm run typecheck --workspace @shop/api && npm run typecheck --workspace @shop/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
