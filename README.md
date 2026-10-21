@@ -58,7 +58,7 @@ zamówień. Usunięcie produktu usuwa go z aktywnych koszyków, ale zachowuje
 nazwę i cenę jako historyczny zapis w istniejących zamówieniach. Nie używaj
 przykładowych ani słabych haseł na środowisku produkcyjnym.
 
-## Wdrożenie na VPS
+## Opcjonalne wdrożenie na VPS
 
 Katalog `deploy` zawiera produkcyjny obraz Docker, Compose z PostgreSQL i Caddy
 (automatyczny HTTPS) oraz skrypty wdrożenia i rollbacku. Skrypty uruchamiaj na
@@ -91,48 +91,40 @@ W razie problemu `./deploy/scripts/rollback.sh staging` (lub `production`)
 przywraca poprzednią wersję aplikacji. Rollback nie cofa schematu ani danych
 bazy; migracje wdrożeniowe muszą pozostać kompatybilne ze starą wersją aplikacji.
 
-### CI/CD przez GitHub Actions
+### CI/CD i obrazy Docker w GitHub Actions
 
-Workflow CI uruchamia testy, kontrolę typów i build przy pushu oraz pull requeście.
-Push na `main` może automatycznie wdrożyć staging po włączeniu tej opcji. Ręczny
-wybór `production` w **Actions → CI → Run workflow** najpierw wdraża i publicznie
-sprawdza ten sam commit na stagingu, a dopiero potem czeka na zatwierdzenie
-środowiska `production`. Po akceptacji wdraża dokładnie ten commit. Wdrożenie
-przez SSH uruchamia na VPS-ie istniejące `deploy/scripts/deploy.sh`, więc nadal
-wykonuje backup, migracje i wewnętrzne health checki. Jeśli `main` zmieni się
-przed wdrożeniem, stary run zostanie odrzucony zamiast wdrażać starszy commit.
-Odrębne **Actions → Roll back deployment → Run workflow** przywraca poprzednią
-wersję aplikacji przez `rollback.sh` i ponownie sprawdza publiczny HTTPS; produkcyjny
-rollback również wymaga zgody środowiska `production`. Rollback aplikacji nie
-cofa zmian ani danych bazy.
+Workflow CI uruchamia testy, kontrolę typów i build przy pushu oraz przy pull
+requeście. Po udanym CI push na `main` publikuje obrazy aplikacji i migratora w
+GitHub Container Registry (GHCR). Wypchnięcie taga
+`vX.Y.Z` po przejściu CI publikuje dodatkowo wersjonowane obrazy. Pull requesty
+obrazy budują i sprawdzają, ale ich nie publikują. Pipeline publikuje artefakty,
+nie uruchamia publicznego sklepu i nie wymaga VPS-a.
+
+Nazwy obrazów:
+
+```text
+ghcr.io/mptr604-boop/shop:main
+ghcr.io/mptr604-boop/shop:sha-<commit>
+ghcr.io/mptr604-boop/shop:latest
+ghcr.io/mptr604-boop/shop:main-migrator
+ghcr.io/mptr604-boop/shop:sha-<commit>-migrator
+ghcr.io/mptr604-boop/shop:latest-migrator
+```
+
+Pobranie obrazów wymaga, by pakiet `shop` był publiczny albo by użytkownik
+zalogował się do GHCR z uprawnieniami do prywatnego pakietu:
+
+```bash
+docker pull ghcr.io/mptr604-boop/shop:main
+docker pull ghcr.io/mptr604-boop/shop:main-migrator
+```
+
+Widoczność pakietu można ustawić w ustawieniach pakietu GitHub. Do prezentacji
+sklepu na laptopie nadal można uruchamiać projekt lokalnie (`npm run dev`); samo
+opublikowanie obrazu w GHCR nie wystawia aplikacji w internecie.
+
 Dependabot co tydzień proponuje grupowane aktualizacje zależności npm i GitHub
 Actions jako osobne pull requesty; każdy z nich przechodzi przez ten sam CI.
-
-Przed włączeniem automatyzacji:
-
-1. Przygotuj osobny, czysty checkout repozytorium na VPS-ie dla każdego
-   środowiska. Skonfiguruj dla użytkownika wdrożeniowego klucz SSH o dostępie
-   tylko do odczytu repozytorium oraz dostęp do Docker Compose.
-2. W ustawieniach repozytorium utwórz środowiska GitHub `staging` i
-   `production`. Dla każdego dodaj zmienne środowiskowe `DEPLOY_HOST`,
-   `DEPLOY_USER`, `DEPLOY_PATH` (bezwzględna ścieżka checkoutu) oraz
-   `DEPLOY_KNOWN_HOSTS` (zaufany wpis klucza hosta SSH, nie wynik pobrany
-   bez weryfikacji w workflow), `SHOP_URL` (np.
-   `https://staging.example.com`) oraz `API_URL` (np.
-   `https://api.staging.example.com`). Po wdrożeniu runner sprawdza publiczny
-   HTTPS sklepu i `/ready` API.
-3. Dodaj sekret środowiskowy `DEPLOY_SSH_PRIVATE_KEY` — klucz prywatny
-   uwierzytelniający runnera do VPS-a. Nie używaj klucza deploy key GitHuba,
-   którym VPS pobiera kod.
-4. Dla `production` włącz wymaganych reviewerów i ochronę środowiska. Dla
-   stagingu dodaj zmienną repozytorium `STAGING_DEPLOY_ENABLED=true`, aby
-   włączyć auto-deploy po pushu na `main`. Bez niej staging nie wdraża się
-   automatycznie; nadal można uruchomić ręcznie workflow z `main`. Wybór
-   produkcji i rollback produkcji czekają na zatwierdzenie tego środowiska.
-
-Nie przechowuj kluczy prywatnych ani plików `.env` w repozytorium. Użytkownik
-wdrożeniowy może sterować Dockerem, co daje mu szerokie uprawnienia na VPS-ie;
-zabezpiecz konto, klucze i dostęp sieciowy tak jak dostęp administracyjny.
 
 #### Odtwarzanie backupu bazy
 

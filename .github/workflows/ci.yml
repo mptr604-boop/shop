@@ -3,16 +3,6 @@ name: CI
 on:
   push:
   pull_request:
-  workflow_dispatch:
-    inputs:
-      deploy_environment:
-        description: Environment to deploy after CI passes
-        type: choice
-        options:
-          - staging
-          - production
-        required: true
-        default: staging
 
 permissions:
   contents: read
@@ -87,31 +77,76 @@ jobs:
           docker build -f deploy/Dockerfile --target runtime -t shop:ci .
           docker build -f deploy/Dockerfile --target migrator -t shop:ci-migrator .
 
-  deploy-staging:
+  publish-images:
     if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/main' &&
-       vars.STAGING_DEPLOY_ENABLED == 'true') ||
-      (github.event_name == 'workflow_dispatch' &&
-       (inputs.deploy_environment == 'staging' ||
-        inputs.deploy_environment == 'production') &&
-       github.ref == 'refs/heads/main')
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: verify
     permissions:
       contents: read
-    uses: ./.github/workflows/deploy-vps.yml
-    with:
-      deployment_environment: staging
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-  deploy-production:
-    if: >-
-      github.event_name == 'workflow_dispatch' &&
-      inputs.deploy_environment == 'production' &&
-      github.ref == 'refs/heads/main'
-    needs:
-      - verify
-      - deploy-staging
-    permissions:
-      contents: read
-    uses: ./.github/workflows/deploy-vps.yml
-    with:
-      deployment_environment: production
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image name
+        id: image
+        shell: bash
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >>"$GITHUB_OUTPUT"
+
+      - name: Generate runtime image metadata
+        id: runtime-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=ref,event=branch
+            type=sha,format=long,prefix=sha-
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and publish runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          target: runtime
+          push: true
+          tags: ${{ steps.runtime-meta.outputs.tags }}
+          labels: ${{ steps.runtime-meta.outputs.labels }}
+          cache-from: type=gha,scope=shop-runtime
+          cache-to: type=gha,mode=max,scope=shop-runtime
+
+      - name: Generate migrator image metadata
+        id: migrator-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=ref,event=branch,suffix=-migrator
+            type=sha,format=long,prefix=sha-,suffix=-migrator
+            type=semver,pattern={{version}},suffix=-migrator
+            type=raw,value=latest-migrator,enable={{is_default_branch}}
+
+      - name: Build and publish migrator image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          target: migrator
+          push: true
+          tags: ${{ steps.migrator-meta.outputs.tags }}
+          labels: ${{ steps.migrator-meta.outputs.labels }}
+          cache-from: type=gha,scope=shop-migrator
+          cache-to: type=gha,mode=max,scope=shop-migrator
