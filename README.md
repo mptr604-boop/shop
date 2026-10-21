@@ -46,8 +46,15 @@ npm run db:generate
 npm run db:migrate
 npm run db:seed
 npm run typecheck
+npm run test:api
 npm run build
 ```
+
+Testy integracyjne API wymagają działającego PostgreSQL z zastosowanymi
+migracjami i przykładowymi produktami (`npm run db:migrate` oraz
+`npm run db:seed`). Testy tworzą własne koszyki testowe i sprzątają je po
+zakończeniu. GitHub Actions wykonuje migracje, testy, sprawdzenie typów i build
+przy każdym pushu oraz pull requeście.
 
 ## Struktura
 

@@ -16,6 +16,7 @@
     "db:generate": "npm run db:generate --workspace @shop/api",
     "db:migrate": "npm run db:migrate --workspace @shop/api",
     "db:seed": "npm run db:seed --workspace @shop/api",
+    "test:api": "npm run build --workspace @shop/contracts && npm run test --workspace @shop/api",
     "build": "npm run build --workspace @shop/contracts && npm run build --workspace @shop/api && npm run build --workspace @shop/web",
     "typecheck": "npm run typecheck --workspace @shop/contracts && npm run build --workspace @shop/contracts && npm run typecheck --workspace @shop/api && npm run typecheck --workspace @shop/web"
   },
