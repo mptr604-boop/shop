@@ -4,6 +4,16 @@ Aplikacja sklepu internetowego oparta na React 19 z renderowaniem po stronie
 serwera, API REST w Express i TypeScript oraz PostgreSQL. Repozytorium korzysta
 z npm workspaces; schemat bazy i migracje obsługuje Drizzle ORM.
 
+## Zrzuty ekranu
+
+Widok katalogu produktów:
+
+![Katalog produktów sklepu](docs/screenshots/storefront.png)
+
+Panel administratora do zarządzania produktami i przeglądania zamówień:
+
+![Panel administratora](docs/screenshots/admin-dashboard.png)
+
 ## Wymagania
 
 - Node.js 24 (wersję można ustawić przez `nvm use`)
