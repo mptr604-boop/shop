@@ -97,6 +97,10 @@ Do produkcji użyj osobnego pliku `deploy/.env.production` i uruchom
 commita, zapisuje backup PostgreSQL przed migracją, uruchamia migracje i
 sprawdza gotowość API oraz SSR. Backupy lokalne na serwerze są przechowywane
 przez 14 dni; skonfiguruj dodatkową kopię poza VPS-em przed użyciem produkcyjnym.
+Każdy deploy, rollback i restore dopisuje linię JSON do `deploy/.state/journal.jsonl`
+(czas, akcja, wynik, wersja, użytkownik, commit, notatka). Przy rollbacku podaj powód:
+`./deploy/scripts/rollback.sh production "opis błędu"`.
+
 W razie problemu `./deploy/scripts/rollback.sh staging` (lub `production`)
 przywraca poprzednią wersję aplikacji. Rollback nie cofa schematu ani danych
 bazy; migracje wdrożeniowe muszą pozostać kompatybilne ze starą wersją aplikacji.

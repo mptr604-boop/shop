@@ -17,6 +17,10 @@ state_dir="$root_dir/deploy/.state"
 project_name="shop-$environment"
 release_tag="$(git -C "$root_dir" rev-parse --short=12 HEAD)"
 
+source "$root_dir/deploy/scripts/journal.sh"
+mkdir -p "$state_dir"
+journal_init "$root_dir" "$environment" deploy "$release_tag"
+
 if [[ ! -f "$env_file" ]]; then
   echo "Missing deployment settings: $env_file" >&2
   echo "Copy deploy/.env.$environment.example and configure it first." >&2

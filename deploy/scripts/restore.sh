@@ -24,6 +24,10 @@ checksum_file="$backup_file.sha256"
 compose_file="$root_dir/deploy/compose.yml"
 project_name="shop-$environment"
 
+source "$root_dir/deploy/scripts/journal.sh"
+mkdir -p "$root_dir/deploy/.state"
+journal_init "$root_dir" "$environment" restore "$backup_name" "restored from backup"
+
 if [[ ! -f "$env_file" ]]; then
   echo "Missing deployment settings: $env_file" >&2
   exit 1
@@ -110,6 +114,7 @@ SQL
     fi
   fi
 
+  journal_finish "$result"
   exit "$result"
 }
 trap cleanup EXIT

@@ -23,7 +23,7 @@ Sklep internetowy w monorepo npm workspaces: React Router (SSR) + Express API + 
 | `packages/contracts` | Wspólne schematy zod i typy (front i API) |
 | `deploy/` | `compose.yml`, `Dockerfile`, `Caddyfile`, skrypty `deploy.sh`, `rollback.sh`, `backup.sh`, `restore.sh`, `monitor.sh` |
 | `.github/workflows/ci.yml` | CI, publikacja obrazów do GHCR, wdrożenie staging → produkcja |
-| `tests/deploy/` | Testy skryptów monitoringu i odtwarzania backupu |
+| `tests/deploy/` | Testy skryptów monitoringu, odtwarzania backupu i dziennika wdrożeń |
 
 ## 3. Uruchomienie
 
@@ -40,6 +40,7 @@ Migracje nie uruchamiają się automatycznie przy starcie API.
 | Logi z ID korelacji | ✅ |
 | CI, obrazy GHCR, wdrożenie przez SSH (staging przed produkcją), rollback | ✅ |
 | Backup, restore (testowany), monitoring z alertami webhookiem | ✅ |
+| Dziennik wdrożeń `deploy/.state/journal.jsonl` (deploy, rollback z powodem, restore); testowany dla rollbacku, deploy/restore tylko `bash -n` | ✅ |
 | Płatności | ❌ brak (celowo, zakres demonstracyjny) |
 
 ## 5. Znane ograniczenia (stan faktyczny)

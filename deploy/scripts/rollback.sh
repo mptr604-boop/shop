@@ -5,7 +5,7 @@ environment="${1:-}"
 case "$environment" in
   staging|production) ;;
   *)
-    echo "Usage: $0 staging|production" >&2
+    echo "Usage: $0 staging|production [reason]" >&2
     exit 2
     ;;
 esac
@@ -17,6 +17,11 @@ state_dir="$root_dir/deploy/.state"
 current_file="$state_dir/$environment.current"
 previous_file="$state_dir/$environment.previous"
 project_name="shop-$environment"
+
+source "$root_dir/deploy/scripts/journal.sh"
+mkdir -p "$state_dir"
+journal_init "$root_dir" "$environment" rollback "$(cat "$previous_file" 2>/dev/null || true)" \
+  "reason: ${2:-not given}; database was NOT rolled back"
 
 if [[ ! -f "$env_file" || ! -f "$previous_file" || ! -f "$current_file" ]]; then
   echo "Deployment settings or rollback history are missing for $environment." >&2
